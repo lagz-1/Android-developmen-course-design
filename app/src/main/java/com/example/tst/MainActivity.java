@@ -46,7 +46,7 @@ public class MainActivity extends AppCompatActivity {
 
     Uri image_uri;
 
-    //申请录音权限
+    //申请拍照权限
     private static final int GET_RECODE_CAMERA = 1;
     private static String[] PERMISSION_CAMERA = {
             Manifest.permission.CAMERA
@@ -58,26 +58,52 @@ public class MainActivity extends AppCompatActivity {
     };
 
 
+    private static final int GET_RECODE_RECORD_AUDIO = 1;
+    private static String[] PERMISSION_RECORD_AUDIO = {
+            Manifest.permission.RECORD_AUDIO
+    };
+
+
+
 
     static final int REQUEST_READ_EXTERNAL_STORAGE_CODE = 3;
 
     public static Bitmap Gray(Bitmap bitmap) {//转化bitmap为mat并将mat转化为灰度图像，又转化回去
-        Mat matOp = new Mat(bitmap.getHeight(), bitmap.getWidth(), CvType.CV_8UC4);
+        Mat matOp = new Mat(bitmap.getHeight(), bitmap.getWidth(), CvType.CV_8UC1);
         Utils.bitmapToMat(bitmap, matOp);
         Imgproc.cvtColor(matOp, matOp, Imgproc.COLOR_BGR2GRAY); // 转换为灰度图
 
+        //应该用INV，把原来暗的地方变为前景，也就是烟雾变为前景，我们要提取的东西
+        Imgproc.threshold(matOp, matOp, 0, 255, Imgproc.THRESH_BINARY_INV | Imgproc.THRESH_OTSU);
+//        Imgproc.threshold(matOp, matOp, 127, 255, Imgproc.THRESH_BINARY | Imgproc.THRESH_OTSU);
 
-        Utils.matToBitmap(matOp,bitmap);
+        // 定义一个3x3的结构元素（kernel）
+        Mat kernel = Imgproc.getStructuringElement(Imgproc.MORPH_RECT, new Size(5, 5));
+
+        // 使用开运算来去除毛边和小噪点
+        Mat opening = new Mat();
+        Imgproc.morphologyEx(matOp, opening, Imgproc.MORPH_OPEN, kernel, new Point(-1, -1), 2);
+
+        // opening 现在包含了经过开运算处理后的图像
+
+        Utils.matToBitmap(opening,bitmap);
+        //Utils.matToBitmap(matOp,bitmap);
         return bitmap;
     }
 
     public Bitmap calc(Bitmap bitmap){
 
-        Mat matOp = new Mat(bitmap.getHeight(), bitmap.getWidth(), CvType.CV_8UC4);
+        Mat matOp = new Mat(bitmap.getHeight(), bitmap.getWidth(), CvType.CV_8UC1);
         Utils.bitmapToMat(bitmap, matOp);
 
+        // 应用大津二值化
+        //Mat binaryImage = matOp.clone();
+        //Imgproc.threshold(binaryImage, binaryImage, 0, 255, Imgproc.THRESH_BINARY | Imgproc.THRESH_OTSU);
+        Imgproc.threshold(matOp, matOp, 0, 255, Imgproc.THRESH_BINARY_INV | Imgproc.THRESH_OTSU);
+        //Imgproc.threshold(matOp, matOp, 127, 255, Imgproc.THRESH_BINARY | Imgproc.THRESH_OTSU);
+
         // 应用高斯模糊以降低噪音
-        Imgproc.GaussianBlur(matOp, matOp, new Size(9, 9), 0);
+        //Imgproc.GaussianBlur(matOp, matOp, new Size(9, 9), 0);
 
         // 应用阈值分割以分割烟雾
 //        Mat thresholded = new Mat();
@@ -95,14 +121,16 @@ public class MainActivity extends AppCompatActivity {
 //        Imgproc.findContours(thresholded, contours, hierarchy, Imgproc.RETR_LIST, Imgproc.CHAIN_APPROX_SIMPLE);
 
         // 绘制轮廓或提取分割的烟雾区域
-        Mat resultMat = new Mat();
+//        Mat resultMat = new Mat();
 //        Imgproc.drawContours(resultMat, contours, -1, new Scalar(0, 0, 255), 3);
 
         // 你可以显示结果或保存它
-        Bitmap resultBitmap = Bitmap.createBitmap(resultMat.cols(), resultMat.rows(), Bitmap.Config.ARGB_8888);
-        Utils.matToBitmap(resultMat, resultBitmap);
+        //Bitmap resultBitmap = Bitmap.createBitmap(resultMat.cols(), resultMat.rows(), Bitmap.Config.ARGB_8888);
+        //Utils.matToBitmap(resultMat, resultBitmap);
 
-        return resultBitmap;
+        Utils.matToBitmap(matOp,bitmap);
+        //Utils.matToBitmap(binaryImage,bitmap);
+        return bitmap;
     }
 
 
@@ -118,6 +146,17 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    /*
+     * 申请录音权限*/
+    public static void verifyAudioPermissions(Activity activity) {
+        int permission = ActivityCompat.checkSelfPermission(activity,
+                Manifest.permission.RECORD_AUDIO);
+        if (permission != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(activity, PERMISSION_RECORD_AUDIO,
+                    GET_RECODE_RECORD_AUDIO);
+        }
+    }
+
 
     /*
      * 申请写外存权限*/
@@ -129,6 +168,8 @@ public class MainActivity extends AppCompatActivity {
                     GET_RECODE_WRITE_EXTERNAL_STORAGE);
         }
     }
+
+
 
 
         public static void PerREAD_EXTERNAL_STORAGE(MainActivity mainActivity)
@@ -163,6 +204,7 @@ public class MainActivity extends AppCompatActivity {
             public void onClick(View view) {
 
                 verifyCameraPermissions(MainActivity.this);
+                verifyAudioPermissions(MainActivity.this);
 
                 File image_file = new File(getExternalCacheDir(),"temp.jpg");//该方法其实并没有在内存中创建文件，所以还要创建文件
                 if(image_file.exists()){
