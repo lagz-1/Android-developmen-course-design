@@ -25,6 +25,7 @@ import android.widget.Toast;
 
 import org.opencv.android.OpenCVLoader;
 import org.opencv.android.Utils;
+import org.opencv.core.Core;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
 import org.opencv.core.MatOfPoint;
@@ -68,7 +69,8 @@ public class MainActivity extends AppCompatActivity {
 
     static final int REQUEST_READ_EXTERNAL_STORAGE_CODE = 3;
 
-    public static Bitmap Gray(Bitmap bitmap) {//转化bitmap为mat并将mat转化为灰度图像，又转化回去
+    public static Bitmap Gray(Bitmap bitmap){//转化bitmap为mat并将mat转化为灰度图像，又转化回去
+        Mat img = new Mat(bitmap.getHeight(), bitmap.getWidth(), CvType.CV_8UC3);
         Mat matOp = new Mat(bitmap.getHeight(), bitmap.getWidth(), CvType.CV_8UC1);
         Utils.bitmapToMat(bitmap, matOp);
         Imgproc.cvtColor(matOp, matOp, Imgproc.COLOR_BGR2GRAY); // 转换为灰度图
@@ -86,52 +88,118 @@ public class MainActivity extends AppCompatActivity {
 
         // opening 现在包含了经过开运算处理后的图像
 
-        Utils.matToBitmap(opening,bitmap);
-        //Utils.matToBitmap(matOp,bitmap);
+        //膨胀操作，用来找到背景区域
+        Mat background = new Mat();
+        Imgproc.dilate(opening, background, kernel, new Point(-1, -1), 2);
+
+
+        //腐蚀操作，用于找到前景区域
+        Mat foreground = new Mat();
+        Imgproc.erode(opening, foreground, kernel, new Point(-1, -1), 2);
+
+
+        /*
+        * 距离变换：
+        *    dist_transform：使用cv2.distanceTransform计算图像中每个像素到最近背景像素的距离。
+        *    通过归一化将其值映射到0到1之间。
+        *
+        * */
+        Mat distTransform = new Mat();
+        Imgproc.distanceTransform(opening, distTransform, Imgproc.DIST_L2, 5);
+        Core.normalize(distTransform, distTransform, 0, 1.0, Core.NORM_MINMAX);
+
+//二值化
+        Mat fgThresholded = new Mat();
+        Imgproc.threshold(distTransform, fgThresholded, 0.5 * Core.minMaxLoc(distTransform).maxVal, 255, Imgproc.THRESH_BINARY);
+//        Imgproc.threshold(distTransform, foreground, 0.5 * Core.minMaxLoc(distTransform).maxVal, 255, Imgproc.THRESH_BINARY);
+
+
+// 计算未知区域
+        Mat unknown = new Mat();
+        Core.subtract(background, fgThresholded, unknown,new Mat(),CvType.CV_32S);
+//        unknown.convertTo(unknown,CvType.CV_8UC4);
+
+
+// 进行连通组件分析
+        /*
+*        connectedComponents
+*public static int connectedComponents(Mat image, Mat labels, int connectivity, int ltype)
+*参数一：image，待标记的单通道图像，数据类型必须为CV_8U。
+*参数二：labels，标记连通域后的输出图像，与输入图像具有相同的尺寸。
+*参数三：connectivity，标记连通域时使用的邻域种类，4表示4-邻域，8表示8-邻域。
+*参数四：ltype，输出图像的数据类型，目前支持CV_32S和CV_16U两种数据类型。
+*/
+
+        Mat labels = new Mat(bitmap.getHeight(),bitmap.getWidth(),CvType.CV_8U);//省略的参数 ：connectivity = 8，ltype = CV_32S
+        foreground.convertTo(foreground,CvType.CV_8UC4);//服了，把fgThresholded换为foregound终于成功了，类目
+        Imgproc.connectedComponents(foreground, labels);
+
+
+// 标记前景，背景和未知区域
+//        for (int i = 0; i < labels.rows(); i++) {
+//            for (int j = 0; j < labels.cols(); j++) {
+//                double[] label = labels.get(i, j);
+//                if (label[0] == 1) {
+//                    fgThresholded.put(i, j, 0);
+//                    background.put(i, j, 1);
+//                } else if (label[0] > 1) {
+//                    fgThresholded.put(i, j, 1);
+//                    background.put(i, j, 0);
+//                }
+//            }
+//        }
+//
+        for (int i = 0; i < labels.rows(); i++) {
+            for (int j = 0; j < labels.cols(); j++) {
+                double[] label = labels.get(i, j);
+                labels.put(i,j,(int)label[0]+1);
+            }
+        }
+
+
+// 修改标签以标记未知区域
+        for (int i = 0; i < unknown.rows(); i++) {
+            for (int j = 0; j < unknown.cols(); j++) {
+                double[] u = unknown.get(i, j);
+                if (u[0] == 255) {
+                    labels.put(i, j, (int)0);
+                }
+            }
+        }
+        unknown.convertTo(unknown,CvType.CV_8UC4);
+        labels.convertTo(labels,CvType.CV_8UC4);
+//
+//        // 应用分水岭算法
+//
+//        labels.convertTo(labels, CvType.CV_32SC1);
+//        Imgproc.watershed(img, labels);
+//
+//
+//        // 创建一个用于掩码的Mat，将抠图区域标记为255，背景标记为0
+//        Mat mask = new Mat(img.rows(), img.cols(), CvType.CV_8UC4, new Scalar(0));
+//        for (int i = 0; i < labels.rows(); i++) {
+//            for (int j = 0; j < labels.cols(); j++) {
+//                double[] markerValue = labels.get(i, j);
+//                if (markerValue[0] > 1) {
+//                    mask.put(i, j, (int)255);
+//                }
+//            }
+//        }
+//
+//// 使用掩码来提取抠图区域
+//        Mat Chosen = new Mat();
+//        Core.bitwise_and(img, img, Chosen, mask);
+//
+//// 在这里，coins包含了抠图后的图像
+
+
+        Utils.matToBitmap(unknown,bitmap);
+//        Utils.matToBitmap(Chosen,bitmap);
         return bitmap;
     }
 
-    public Bitmap calc(Bitmap bitmap){
 
-        Mat matOp = new Mat(bitmap.getHeight(), bitmap.getWidth(), CvType.CV_8UC1);
-        Utils.bitmapToMat(bitmap, matOp);
 
-        // 应用大津二值化
-        //Mat binaryImage = matOp.clone();
-        //Imgproc.threshold(binaryImage, binaryImage, 0, 255, Imgproc.THRESH_BINARY | Imgproc.THRESH_OTSU);
-        Imgproc.threshold(matOp, matOp, 0, 255, Imgproc.THRESH_BINARY_INV | Imgproc.THRESH_OTSU);
-        //Imgproc.threshold(matOp, matOp, 127, 255, Imgproc.THRESH_BINARY | Imgproc.THRESH_OTSU);
-
-        // 应用高斯模糊以降低噪音
-        //Imgproc.GaussianBlur(matOp, matOp, new Size(9, 9), 0);
-
-        // 应用阈值分割以分割烟雾
-//        Mat thresholded = new Mat();
-//        Imgproc.threshold(matOp, thresholded, 90, 255, Imgproc.THRESH_BINARY);
-
-        // 执行形态学操作（腐蚀和膨胀）
-//        Mat kernel = Imgproc.getStructuringElement(Imgproc.MORPH_ELLIPSE, new Size(25, 25));
-//        Imgproc.morphologyEx(thresholded, thresholded, Imgproc.MORPH_CLOSE, kernel);
-//        Imgproc.erode(thresholded, thresholded, new Mat(), new Point(-1, -1), 4);
-//        Imgproc.dilate(thresholded, thresholded, new Mat(), new Point(-1, -1), 4);
-
-        // 查找轮廓
-//        List<MatOfPoint> contours = new ArrayList<>();
-//        Mat hierarchy = new Mat();
-//        Imgproc.findContours(thresholded, contours, hierarchy, Imgproc.RETR_LIST, Imgproc.CHAIN_APPROX_SIMPLE);
-
-        // 绘制轮廓或提取分割的烟雾区域
-//        Mat resultMat = new Mat();
-//        Imgproc.drawContours(resultMat, contours, -1, new Scalar(0, 0, 255), 3);
-
-        // 你可以显示结果或保存它
-        //Bitmap resultBitmap = Bitmap.createBitmap(resultMat.cols(), resultMat.rows(), Bitmap.Config.ARGB_8888);
-        //Utils.matToBitmap(resultMat, resultBitmap);
-
-        Utils.matToBitmap(matOp,bitmap);
-        //Utils.matToBitmap(binaryImage,bitmap);
-        return bitmap;
-    }
 
 
 
