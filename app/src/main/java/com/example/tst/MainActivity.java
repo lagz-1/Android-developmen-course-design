@@ -1,5 +1,6 @@
 package com.example.tst;
 import com.bumptech.glide.Glide;
+import com.squareup.picasso.Picasso;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -25,6 +26,7 @@ import android.provider.MediaStore;
 import android.view.View;
 import android.widget.Button;
 import android.widget.ImageView;
+import androidx.fragment.app.Fragment;
 import android.widget.Toast;
 
 
@@ -43,7 +45,13 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.FileOutputStream;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.util.Objects;
 
+import com.example.tst.getPhotoFromPhotoAlbum;
+
+import pub.devrel.easypermissions.EasyPermissions;
 
 
 public class MainActivity extends AppCompatActivity implements View.OnClickListener {
@@ -226,6 +234,13 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         intent.putExtra("outputX", 150);
         intent.putExtra("outputY", 150);
         intent.putExtra("return-data", true);
+
+        uritempFile = Uri.parse("file://" + "/" + Environment.getExternalStorageDirectory().getPath() + "/" + System.currentTimeMillis() + ".jpg");
+        intent.putExtra(MediaStore.EXTRA_OUTPUT, uritempFile);
+        intent.putExtra("outputFormat", Bitmap.CompressFormat.JPEG.toString());
+        intent.putExtra("noFaceDetection", true);
+
+
         startActivityForResult(intent, 3);
     }
 
@@ -296,6 +311,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     }
 
 
+
+
+
+
     @SuppressLint("MissingInflatedId")
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -364,30 +383,30 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     }
 
 
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-        switch (requestCode) {
-            case 1:
-                if (resultCode == RESULT_OK) {
-                    Bitmap bitmap = null;
-                    try {
-                        bitmap = BitmapFactory.decodeStream(getContentResolver().openInputStream(image_uri));
-                        bitmap = Gray(bitmap);
-                        //bitmap = calc(bitmap);
-
-                        tv1.setImageBitmap(bitmap);//这下展示的就是一个全灰的图了
-
-                        //Intent intentToAnalyse = new Intent(this, ImageAnalysis.class);
-                        //intentToAnalyse.putExtra("image", bitmap);
-                        //startActivity(intentToAnalyse);
-                    } catch (FileNotFoundException e) {
-                        e.printStackTrace();
-                    }
-
-                }
-        }
-    }
+//    @Override
+//    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
+//        super.onActivityResult(requestCode, resultCode, data);
+//        switch (requestCode) {
+//            case 1:
+//                if (resultCode == RESULT_OK) {
+//                    Bitmap bitmap = null;
+//                    try {
+//                        bitmap = BitmapFactory.decodeStream(getContentResolver().openInputStream(image_uri));
+//                        bitmap = Gray(bitmap);
+//                        //bitmap = calc(bitmap);
+//
+//                        tv1.setImageBitmap(bitmap);//这下展示的就是一个全灰的图了
+//
+//                        //Intent intentToAnalyse = new Intent(this, ImageAnalysis.class);
+//                        //intentToAnalyse.putExtra("image", bitmap);
+//                        //startActivity(intentToAnalyse);
+//                    } catch (FileNotFoundException e) {
+//                        e.printStackTrace();
+//                    }
+//
+//                }
+//        }
+//    }
 
 
     @Override
@@ -425,7 +444,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             // 调用 photoClip 方法裁剪相册照片
             photoClip(data.getData());
             // 使用 Glide 将照片加载到 ImageView 中
-            Glide.with(MainActivity.this).load(photoPath).into(ivTest);
+            Glide.with(MainActivity.this).load(photoPath).into(tv1);
         } else if (requestCode == 3 && resultCode == RESULT_OK) {
             // 检查是否是裁剪后的回调
 
@@ -435,11 +454,22 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 // 在这里获得了裁剪后的 Bitmap 对象，可以用于上传或其他操作
                 Bitmap image = bundle.getParcelable("data");
                 // 将 Bitmap 设置到 ImageView 上
-                ivTest.setImageBitmap(image);
+                tv1.setImageBitmap(image);
                 // 也可以执行一些保存、压缩等操作后再上传
                 String path = saveImage("头像", image);
                 Log.d("裁剪路径:", path);
             }
+
+            Picasso.with(MainActivity.this).load(uritempFile).into(tv1);
+            File file = null;
+            try {
+                file = new File(new URI(uritempFile.toString()));
+            } catch (URISyntaxException e) {
+                e.printStackTrace();
+            }
+            //照片路径
+            String path = Objects.requireNonNull(file).getPath();
+
         }
         super.onActivityResult(requestCode, resultCode, data);
     }
@@ -455,11 +485,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
 
-        switch (requestCode){
-            case 1:
-                break;
-            default:break;
-        }
+        //框架要求必须这么写
+        EasyPermissions.onRequestPermissionsResult(requestCode, permissions, grantResults, this);
 
 
 
