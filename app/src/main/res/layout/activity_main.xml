@@ -14,13 +14,23 @@
         tools:ignore="MissingConstraints" />
 
     <Button
-        android:layout_width="wrap_content"
+        android:layout_width="150sp"
         android:layout_height="wrap_content"
-        android:text="camera"
+        android:text="拍照"
         app:layout_constraintTop_toBottomOf="@+id/tv1"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         android:id="@+id/btn1"
         tools:ignore="MissingConstraints" />
+
+    <Button
+        android:layout_width="150sp"
+        android:layout_height="wrap_content"
+        app:layout_constraintTop_toBottomOf="@+id/btn1"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        android:id="@+id/btn2"
+        tools:ignore="MissingConstraints"
+        android:text="调用相册" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>
