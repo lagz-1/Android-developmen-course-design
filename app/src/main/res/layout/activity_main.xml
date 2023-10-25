@@ -33,4 +33,14 @@
         tools:ignore="MissingConstraints"
         android:text="调用相册" />
 
+    <Button
+        android:layout_width="150sp"
+        android:layout_height="wrap_content"
+        app:layout_constraintTop_toBottomOf="@+id/btn2"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        android:id="@+id/btnNext"
+        tools:ignore="MissingConstraints"
+        android:text="下一步" />
+
 </androidx.constraintlayout.widget.ConstraintLayout>

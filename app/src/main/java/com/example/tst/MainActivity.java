@@ -3,10 +3,8 @@ import com.bumptech.glide.Glide;
 import com.squareup.picasso.Picasso;
 
 import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
-import androidx.core.content.ContextCompat;
 import androidx.core.content.FileProvider;
 
 import android.Manifest;
@@ -14,42 +12,27 @@ import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.Intent;
 import android.content.pm.PackageManager;
-import android.icu.lang.UCharacter;
+import android.graphics.BitmapFactory;
 import android.os.Build;
 import android.os.Environment;
 import android.os.Bundle;
 import android.util.Log;
 import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.net.Uri;
 import android.provider.MediaStore;
 import android.view.View;
 import android.widget.Button;
 import android.widget.ImageView;
-import androidx.fragment.app.Fragment;
-import android.widget.Toast;
 
 
 import org.opencv.android.OpenCVLoader;
-import org.opencv.android.Utils;
-import org.opencv.core.Core;
-import org.opencv.core.CvType;
-import org.opencv.core.Mat;
-import org.opencv.core.MatOfPoint;
-import org.opencv.core.Point;
-import org.opencv.core.Scalar;
-import org.opencv.core.Size;
-import org.opencv.imgproc.Imgproc;
 
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.FileOutputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Objects;
-
-import com.example.tst.getPhotoFromPhotoAlbum;
 
 import pub.devrel.easypermissions.EasyPermissions;
 
@@ -57,13 +40,15 @@ import pub.devrel.easypermissions.EasyPermissions;
 public class MainActivity extends AppCompatActivity implements View.OnClickListener {
 
     ImageView tv1;
-    Button btn1, btn2;
+    Button btn1, btn2,btnNext;
 
     Uri image_uri;
 
     private File cameraSavePath;
     private Uri uritempFile;
     private String photoName = System.currentTimeMillis() + ".jpg";
+
+    Bitmap image = null;
 
     //申请拍照权限
     private static final int GET_RECODE_CAMERA = 1;
@@ -193,7 +178,11 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     }
 
 
-
+    private void GoToAnalyse(){
+        Intent intentToAnalyse = new Intent(this, ImageAnalysis.class);
+        intentToAnalyse.putExtra("image", image);
+        startActivity(intentToAnalyse);
+    }
 
 
 
@@ -203,12 +192,15 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        OpenCVLoader.initDebug();//忘记初始化了，损失惨重！
-        System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
+        OpenCVLoader.initDebug();//忘记初始化了，损失惨重!
 
         tv1 = findViewById(R.id.tv1);
         btn1 = findViewById(R.id.btn1);//拍照按钮
         btn2 = findViewById(R.id.btn2);//调用相册按钮
+
+        btnNext = findViewById(R.id.btnNext);
+            btnNext.setVisibility(View.INVISIBLE);
+
 
 
         //拍照照片路径
@@ -217,6 +209,11 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
         btn1.setOnClickListener(this);
         btn2.setOnClickListener(this);
+        btnNext.setOnClickListener(this);
+
+
+        // 开启一个后台线程来检查bitmap对象
+
 
 
     }
@@ -232,14 +229,22 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             case R.id.btn2:
                 goPhotoAlbum();
                 break;
+            case R.id.btnNext:
+                GoToAnalyse();
+                break;
         }
+
     }
+
 
 
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+//        super.onActivityResult(requestCode, resultCode, data);
+
         String photoPath;
+//        Bitmap image = null;
 
         if (requestCode == 1 && resultCode == RESULT_OK) {
             // 检查是否是拍照的回调
@@ -281,12 +286,14 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
             if (bundle != null) {
                 // 在这里获得了裁剪后的 Bitmap 对象，可以用于上传或其他操作
-                Bitmap image = bundle.getParcelable("data");
+                image = bundle.getParcelable("data");
+                // 也可以执行一些保存、压缩等操作后再上传
+                String path = saveImage("图片", image);
+                Log.d("裁剪路径:", path);
+
                 // 将 Bitmap 设置到 ImageView 上
                 tv1.setImageBitmap(image);
-                // 也可以执行一些保存、压缩等操作后再上传
-                String path = saveImage("头像", image);
-                Log.d("裁剪路径:", path);
+
             }
 
             Picasso.with(MainActivity.this).load(uritempFile).into(tv1);
@@ -301,6 +308,15 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
         }
         super.onActivityResult(requestCode, resultCode, data);
+
+
+//        Intent intentToAnalyse = new Intent(this, ImageAnalysis.class);
+//        intentToAnalyse.putExtra("image", image);
+//        startActivity(intentToAnalyse);
+
+
+        btnNext.setVisibility(View.VISIBLE);
+
     }
 
 
