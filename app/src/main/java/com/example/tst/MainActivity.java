@@ -49,6 +49,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private String photoName = System.currentTimeMillis() + ".jpg";
 
     Bitmap image = null;
+    String imagePath;
 
     //申请拍照权限
     private static final int GET_RECODE_CAMERA = 1;
@@ -122,24 +123,24 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
 
     //该方法 传入获取照片的 bitmap 和裁剪之后的照片名称，生成文件的保存路径，将其保存在了本地的根目录。
-    public String saveImage(String name, Bitmap bmp) {
-        File appDir = new File(Environment.getExternalStorageDirectory().getPath());
-        if (!appDir.exists()) {
-            appDir.mkdir();
-        }
-        String fileName = name + ".jpg";
-        File file = new File(appDir, fileName);
-        try {
-            FileOutputStream fos = new FileOutputStream(file);
-            bmp.compress(Bitmap.CompressFormat.PNG, 100, fos);
-            fos.flush();
-            fos.close();
-            return file.getAbsolutePath();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        return null;
-    }
+//    public String saveImage(String name, Bitmap bmp) {
+//        File appDir = new File(Environment.getExternalStorageDirectory().getPath());
+//        if (!appDir.exists()) {
+//            appDir.mkdir();
+//        }
+//        String fileName = name + ".jpg";
+//        File file = new File(appDir, fileName);
+//        try {
+//            FileOutputStream fos = new FileOutputStream(file);
+//            bmp.compress(Bitmap.CompressFormat.JPEG, 100, fos);
+//            fos.flush();
+//            fos.close();
+//            return file.getAbsolutePath();
+//        } catch (IOException e) {
+//            e.printStackTrace();
+//        }
+//        return null;
+//    }
 
 
     /*
@@ -180,7 +181,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
     private void GoToAnalyse(){
         Intent intentToAnalyse = new Intent(this, ImageAnalysis.class);
-        intentToAnalyse.putExtra("image", image);
+        intentToAnalyse.putExtra("imagePath", imagePath);
         startActivity(intentToAnalyse);
     }
 
@@ -265,7 +266,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 photoClip(image_uri);
             }
 
-            Log.d("拍照返回图片路径:", photoPath);
+            Log.d("Photos", photoPath);
             // 使用 Glide 将照片加载到 ImageView 中
             Glide.with(MainActivity.this).load(photoPath).into(tv1);
 
@@ -286,10 +287,11 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
             if (bundle != null) {
                 // 在这里获得了裁剪后的 Bitmap 对象，可以用于上传或其他操作
+
                 image = bundle.getParcelable("data");
-                // 也可以执行一些保存、压缩等操作后再上传
-                String path = saveImage("图片", image);
-                Log.d("裁剪路径:", path);
+//                 也可以执行一些保存、压缩等操作后再上传
+//                String path = saveImage("图片", image);
+//                Log.e("notmywrong",path);
 
                 // 将 Bitmap 设置到 ImageView 上
                 tv1.setImageBitmap(image);
@@ -304,15 +306,11 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 e.printStackTrace();
             }
             //照片路径
-            String path = Objects.requireNonNull(file).getPath();
+            imagePath = Objects.requireNonNull(file).getPath();
+            Log.e("notnot",imagePath);
 
         }
         super.onActivityResult(requestCode, resultCode, data);
-
-
-//        Intent intentToAnalyse = new Intent(this, ImageAnalysis.class);
-//        intentToAnalyse.putExtra("image", image);
-//        startActivity(intentToAnalyse);
 
 
         btnNext.setVisibility(View.VISIBLE);
