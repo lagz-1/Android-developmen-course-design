@@ -36,4 +36,15 @@
         android:id="@+id/btnReturn"
         tools:ignore="MissingConstraints" />
 
+    <Button
+        android:layout_width="150sp"
+        android:layout_height="wrap_content"
+        android:text="导出数据"
+        app:layout_constraintTop_toBottomOf="@id/btnReturn"
+        android:layout_margin="20dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        android:id="@+id/btnOutPut"
+        tools:ignore="MissingConstraints" />
+
 </androidx.constraintlayout.widget.ConstraintLayout>
