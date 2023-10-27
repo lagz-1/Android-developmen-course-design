@@ -23,6 +23,7 @@ import android.provider.MediaStore;
 import android.view.View;
 import android.widget.Button;
 import android.widget.ImageView;
+import android.widget.Toast;
 
 
 import org.opencv.android.OpenCVLoader;
@@ -46,7 +47,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
     private File cameraSavePath;
     private Uri uritempFile;
-    private String photoName = System.currentTimeMillis() + ".jpg";
+    private String photoName;
 
     Bitmap image = null;
     String imagePath;
@@ -112,7 +113,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         intent.putExtra("outputY", 150);
         intent.putExtra("return-data", true);
 
-        uritempFile = Uri.parse("file://" + "/" + Environment.getExternalStorageDirectory().getPath() + "/" + System.currentTimeMillis() + ".jpg");
+        uritempFile = Uri.parse(  "file:"+Environment.getExternalStorageDirectory().getPath() + "/" + System.currentTimeMillis() + ".jpg");
         Log.e("uritempFile", String.valueOf(uritempFile));
         intent.putExtra(MediaStore.EXTRA_OUTPUT, uritempFile);
         intent.putExtra("outputFormat", Bitmap.CompressFormat.JPEG.toString());
@@ -166,18 +167,46 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     }
 
     //激活相机操作
-    private void goCamera() {
-        Intent intent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+//    private void goCamera() {
+//        Intent intent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+//
+//        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+//            image_uri = FileProvider.getUriForFile(MainActivity.this, "com.example.tst.MainActivity.image_Uri", cameraSavePath);
+//            intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+//        } else {
+//            image_uri = Uri.fromFile(cameraSavePath);
+//        }
+//        intent.putExtra(MediaStore.EXTRA_OUTPUT, image_uri);
+//        MainActivity.this.startActivityForResult(intent, 1);
+//    }
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-            image_uri = FileProvider.getUriForFile(MainActivity.this, "com.example.tst.MainActivity.image_Uri", cameraSavePath);
-            intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-        } else {
-            image_uri = Uri.fromFile(cameraSavePath);
-        }
-        intent.putExtra(MediaStore.EXTRA_OUTPUT, image_uri);
-        MainActivity.this.startActivityForResult(intent, 1);
-    }
+private  void goCamera()
+{
+            verifyCameraPermissions(MainActivity.this);
+            verifyAudioPermissions(MainActivity.this);
+
+            File image_file = new File(getExternalCacheDir(),System.currentTimeMillis() + ".jpg");//该方法其实并没有在内存中创建文件，所以还要创建文件
+            if(image_file.exists()){
+                image_file.delete();
+            }
+            try {
+                image_file.createNewFile();//不加try_cache会报错
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+
+            image_uri = FileProvider.getUriForFile(
+                    getApplicationContext(),
+                    "com.example.tst.MainActivity.image_Uri",
+                    image_file);
+
+            Intent inte = new Intent("android.media.action.IMAGE_CAPTURE");
+            inte.putExtra(MediaStore.EXTRA_OUTPUT,image_uri);
+
+            startActivityForResult(inte,1);
+
+
+}
 
 
     private void GoToAnalyse(){
@@ -206,7 +235,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
 
         //拍照照片路径
-        cameraSavePath = new File(Environment.getExternalStorageDirectory().getPath() + "/" + photoName);
+//        cameraSavePath = new File(Environment.getExternalStorageDirectory().getPath() + "/" + photoName);
 
 
         btn1.setOnClickListener(this);
@@ -243,10 +272,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-//        super.onActivityResult(requestCode, resultCode, data);
+        super.onActivityResult(requestCode, resultCode, data);
 
         String photoPath;
-//        Bitmap image = null;
 
         if (requestCode == 1 && resultCode == RESULT_OK) {
             // 检查是否是拍照的回调
@@ -255,9 +283,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 // 如果设备的Android版本高于N（Android 7.0+）
 
                 // 获取拍照后的照片路径
-                photoPath = String.valueOf(cameraSavePath);
+                photoPath = String.valueOf(image_uri);
                 // 调用 photoClip 方法裁剪照片
-                photoClip(Uri.fromFile(cameraSavePath));
+                photoClip(image_uri);
             } else {
                 // 如果设备的Android版本低于N
 
@@ -269,7 +297,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
             Log.d("Photos", photoPath);
             // 使用 Glide 将照片加载到 ImageView 中
-            Glide.with(MainActivity.this).load(photoPath).into(tv1);
+//            Glide.with(MainActivity.this).load(photoPath).into(tv1);
 
         } else if (requestCode == 2 && resultCode == RESULT_OK) {
             // 检查是否是从相册选择照片的回调
@@ -278,40 +306,46 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             photoPath = getPhotoFromPhotoAlbum.getRealPathFromUri(this, data.getData());
             Log.d("相册返回图片路径:", photoPath);
             // 调用 photoClip 方法裁剪相册照片
-            photoClip(data.getData());
+            photoClip(data.getData());//
             // 使用 Glide 将照片加载到 ImageView 中
-            Glide.with(MainActivity.this).load(photoPath).into(tv1);
+
+//            Glide.with(MainActivity.this).load(photoPath).into(tv1);
         } else if (requestCode == 3 && resultCode == RESULT_OK) {
             // 检查是否是裁剪后的回调
 
-            Bundle bundle = data.getExtras();
+            if (uritempFile != null) {
+            Log.e("好好好", String.valueOf(uritempFile));
+                Bitmap bitmap = BitmapFactory.decodeFile(String.valueOf(uritempFile));
+                tv1.setImageBitmap(bitmap);
 
-            if (bundle != null) {
-                // 在这里获得了裁剪后的 Bitmap 对象，可以用于上传或其他操作
+//                Picasso.with(MainActivity.this).load(uritempFile).into(tv1);
+                File file = null;
+                try {
+                    file = new File(new URI(uritempFile.toString()));
+                } catch (URISyntaxException e) {
+                    e.printStackTrace();
+                }
+                //照片路径
+                imagePath = Objects.requireNonNull(file).getPath();
+                Log.e("notnot",imagePath);
 
-                image = bundle.getParcelable("data");
-//                 也可以执行一些保存、压缩等操作后再上传
-//                String path = saveImage("图片", image);
-//                Log.e("notmywrong",path);
-
-                // 将 Bitmap 设置到 ImageView 上
-                tv1.setImageBitmap(image);
-
+            } else {
+                Toast.makeText(this, "裁剪后的数据为空", Toast.LENGTH_SHORT).show();
             }
 
-            Picasso.with(MainActivity.this).load(uritempFile).into(tv1);
-            File file = null;
-            try {
-                file = new File(new URI(uritempFile.toString()));
-            } catch (URISyntaxException e) {
-                e.printStackTrace();
-            }
-            //照片路径
-            imagePath = Objects.requireNonNull(file).getPath();
-            Log.e("notnot",imagePath);
+//            Picasso.with(MainActivity.this).load(uritempFile).into(tv1);
+//            File file = null;
+//            try {
+//                file = new File(new URI(uritempFile.toString()));
+//            } catch (URISyntaxException e) {
+//                e.printStackTrace();
+//            }
+//            //照片路径
+//            imagePath = Objects.requireNonNull(file).getPath();
+//            Log.e("notnot",imagePath);
 
         }
-        super.onActivityResult(requestCode, resultCode, data);
+//        super.onActivityResult(requestCode, resultCode, data);
 
 
         btnNext.setVisibility(View.VISIBLE);
