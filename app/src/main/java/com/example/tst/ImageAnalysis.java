@@ -114,8 +114,8 @@ public class ImageAnalysis extends AppCompatActivity implements View.OnClickList
 
 //        Imgproc.cvtColor(src_2, src_2,Imgproc.COLOR_BGR2GRAY);//转化为灰度图
 
-        Imgproc.resize(src_1, src_1, src_2.size());
-        Imgproc.resize(src_2, src_2, src_1.size());
+//        Imgproc.resize(src_1, src_1, src_2.size());
+//        Imgproc.resize(src_2, src_2, src_1.size());
 
         Mat hvs_1 = new Mat();
         Mat hvs_2 = new Mat();
@@ -156,7 +156,7 @@ public class ImageAnalysis extends AppCompatActivity implements View.OnClickList
     }
 
 
-    public double Analyse(Bitmap bitmap) {
+    public int Analyse(Bitmap bitmap) {
         Mat matOp = new Mat(bitmap.getHeight(), bitmap.getWidth(), CvType.CV_8U);
         Utils.bitmapToMat(bitmap, matOp);
 //        Imgproc.cvtColor(matOp, matOp, Imgproc.COLOR_BGR2GRAY); // 转换为灰度图
@@ -167,13 +167,13 @@ public class ImageAnalysis extends AppCompatActivity implements View.OnClickList
             Mat matCompared = getDrawableToMat(getDrawable(comparedPic[i]));
 
             double Hist = compareHist(matOp, matCompared);
-            Log.e("hhhh", String.valueOf(Hist));
-            if (Hist >= maxsimilarity) {
+            Log.e("hhhh", String.valueOf(Hist)+" "+comparedPic[i]);
+            if (Hist > maxsimilarity) {
                 flag = i;
                 maxsimilarity = Hist;
             }
         }
-        return maxsimilarity * flag;
+        return flag;
     }
 
 
@@ -192,18 +192,21 @@ public class ImageAnalysis extends AppCompatActivity implements View.OnClickList
 
     // 创建文件夹
     private void createTXTFolder() {
-        String folderPath = Environment.getExternalStorageDirectory().getPath() + "/txtFolder";
+        String folderPath = Environment.getExternalStorageDirectory().getAbsolutePath() + "/txtFolder";
+
         File folder = new File(folderPath);
 
         if (!folder.exists()) {
             // 如果文件夹不存在，创建文件夹
             if (folder.mkdirs()) {
-                Log.i("txtFolder","create succeed");
+
                 // 文件夹创建成功
             } else {
                 // 文件夹创建失败
             }
         }
+        Log.i("txtFolder",folder.getAbsolutePath());
+
     }
 
 
@@ -218,7 +221,6 @@ public class ImageAnalysis extends AppCompatActivity implements View.OnClickList
 
         verifyWRITE_EXTERNAL_STORAGEPermissions(ImageAnalysis.this);
         createTXTFolder();
-
 
 
         // 获取当前日期
@@ -240,14 +242,12 @@ public class ImageAnalysis extends AppCompatActivity implements View.OnClickList
             editor.putString("LastResetDate", currentDateString);
             editor.apply();
 
-            SharedPreferences.Editor editorInt = sPreInt.edit();
-            editor.putInt("CounterValue", buttonCallCount);
-            editor.apply();
-
         }
 
-        txtOutPutDir = Uri.parse("file://" + "/" + Environment.getExternalStorageDirectory().getPath() + "/" + "txtFolder/" + currentDateString + "_" + buttonCallCount + ".txt");
 
+        txtOutPutDir = Uri.parse("file://" + "/" + Environment.getExternalStorageDirectory().getPath() + "/txtFolder/"+ currentDateString + "_" + buttonCallCount + ".txt");
+
+        Log.e("txtOutPutDir", String.valueOf(txtOutPutDir));
 //        // 获取外部存储目录
 //        File storageDir = Environment.getExternalStorageDirectory();
 //
@@ -274,6 +274,11 @@ public class ImageAnalysis extends AppCompatActivity implements View.OnClickList
             writer.close();
             // 增加按钮被调用的次数
             buttonCallCount++;
+
+            SharedPreferences.Editor editorInt = sPreInt.edit();
+            editorInt.putInt("CounterValue", buttonCallCount);
+            editorInt.apply();
+
             Log.e("btnInfo",String.valueOf(buttonCallCount));
         } catch (IOException e) {
             e.printStackTrace();
@@ -338,7 +343,7 @@ public class ImageAnalysis extends AppCompatActivity implements View.OnClickList
 // 初始化 SharedPreferences
         sPre = getSharedPreferences("Date", Context.MODE_PRIVATE);
         sPreInt = getSharedPreferences("count", Context.MODE_PRIVATE);
-
+        buttonCallCount = sPreInt.getInt("CounterValue",0);
     }
 
 
