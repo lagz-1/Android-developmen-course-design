@@ -3,8 +3,10 @@ import com.bumptech.glide.Glide;
 import com.squareup.picasso.Picasso;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 import androidx.core.content.FileProvider;
 
 import android.Manifest;
@@ -23,11 +25,15 @@ import android.provider.MediaStore;
 import android.view.View;
 import android.widget.Button;
 import android.widget.ImageView;
-
+import android.database.Cursor;
+import android.provider.DocumentsContract;
+import android.content.ContentUris;
+import android.widget.Toast;
 
 import org.opencv.android.OpenCVLoader;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.FileOutputStream;
 import java.net.URI;
@@ -36,22 +42,15 @@ import java.util.Objects;
 
 import pub.devrel.easypermissions.EasyPermissions;
 
-
-public class MainActivity extends AppCompatActivity implements View.OnClickListener {
+public class MainActivity extends AppCompatActivity{
 
     ImageView tv1;
     Button btn1, btn2,btnNext;
 
     Uri image_uri;
 
-    private File cameraSavePath;
-    private Uri uritempFile;
-    private String photoName = System.currentTimeMillis() + ".jpg";
 
-    Bitmap image = null;
-    String imagePath;
-
-    //申请拍照权限
+    //申请录音权限
     private static final int GET_RECODE_CAMERA = 1;
     private static String[] PERMISSION_CAMERA = {
             Manifest.permission.CAMERA
@@ -63,15 +62,14 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     };
 
 
-    private static final int GET_RECODE_RECORD_AUDIO = 1;
-    private static String[] PERMISSION_RECORD_AUDIO = {
-            Manifest.permission.RECORD_AUDIO
+
+    private static final int GET_RECODE_READ_EXTERNAL_STORAGE = 1;
+    private static String[] PERMISSION_READ_EXTERNAL_STORAGE = {
+            Manifest.permission.READ_EXTERNAL_STORAGE
     };
 
-
-
-
-
+    public static final int TAKE_CAMERA = 101;
+    public static final int PICK_PHOTO = 102;
 
     /*
      * 申请拍照权限*/
@@ -83,65 +81,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                     GET_RECODE_CAMERA);
         }
     }
-
-    /*
-     * 申请录音权限*/
-    public static void verifyAudioPermissions(Activity activity) {
-        int permission = ActivityCompat.checkSelfPermission(activity,
-                Manifest.permission.RECORD_AUDIO);
-        if (permission != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(activity, PERMISSION_RECORD_AUDIO,
-                    GET_RECODE_RECORD_AUDIO);
-        }
-    }
-
-
-    //该方法，传入我们拿到的照片的 uri 进行激活 Android 系统的裁剪界面。我是在 onActivityResult 内进行调用该方法。
-    private void photoClip(Uri uri) {
-        // 调用系统中自带的图片剪裁
-        Intent intent = new Intent("com.android.camera.action.CROP");
-        intent.setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
-        intent.setDataAndType(uri, "image/*");
-        // 下面这个crop=true是设置在开启的Intent中设置显示的VIEW可裁剪
-        intent.putExtra("crop", "true");
-        // aspectX aspectY 是宽高的比例
-        intent.putExtra("aspectX", 1);
-        intent.putExtra("aspectY", 1);
-        // outputX outputY 是裁剪图片宽高
-        intent.putExtra("outputX", 150);
-        intent.putExtra("outputY", 150);
-        intent.putExtra("return-data", true);
-
-        uritempFile = Uri.parse("file://" + "/" + Environment.getExternalStorageDirectory().getPath() + "/" + System.currentTimeMillis() + ".jpg");
-        Log.e("uritempFile", String.valueOf(uritempFile));
-        intent.putExtra(MediaStore.EXTRA_OUTPUT, uritempFile);
-        intent.putExtra("outputFormat", Bitmap.CompressFormat.JPEG.toString());
-        intent.putExtra("noFaceDetection", true);
-
-
-        startActivityForResult(intent, 3);
-    }
-
-
-    //该方法 传入获取照片的 bitmap 和裁剪之后的照片名称，生成文件的保存路径，将其保存在了本地的根目录。
-//    public String saveImage(String name, Bitmap bmp) {
-//        File appDir = new File(Environment.getExternalStorageDirectory().getPath());
-//        if (!appDir.exists()) {
-//            appDir.mkdir();
-//        }
-//        String fileName = name + ".jpg";
-//        File file = new File(appDir, fileName);
-//        try {
-//            FileOutputStream fos = new FileOutputStream(file);
-//            bmp.compress(Bitmap.CompressFormat.JPEG, 100, fos);
-//            fos.flush();
-//            fos.close();
-//            return file.getAbsolutePath();
-//        } catch (IOException e) {
-//            e.printStackTrace();
-//        }
-//        return null;
-//    }
 
 
     /*
@@ -155,36 +94,15 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         }
     }
 
-
-
-    //激活相册操作
-    private void goPhotoAlbum() {
-        Intent intent = new Intent();
-        intent.setAction(Intent.ACTION_PICK);
-        intent.setType("image/*");
-        startActivityForResult(intent, 2);
-    }
-
-    //激活相机操作
-    private void goCamera() {
-        Intent intent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-            image_uri = FileProvider.getUriForFile(MainActivity.this, "com.example.tst.MainActivity.image_Uri", cameraSavePath);
-            intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-        } else {
-            image_uri = Uri.fromFile(cameraSavePath);
+    public static void verifyREAD_EXTERNAL_STORAGEPermissions(Activity activity) {
+        int permission = ActivityCompat.checkSelfPermission(activity,
+                Manifest.permission.READ_EXTERNAL_STORAGE);
+        if (permission != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(activity, PERMISSION_READ_EXTERNAL_STORAGE,
+                    GET_RECODE_READ_EXTERNAL_STORAGE);
         }
-        intent.putExtra(MediaStore.EXTRA_OUTPUT, image_uri);
-        MainActivity.this.startActivityForResult(intent, 1);
     }
 
-
-    private void GoToAnalyse(){
-        Intent intentToAnalyse = new Intent(this, ImageAnalysis.class);
-        intentToAnalyse.putExtra("imagePath", imagePath);
-        startActivity(intentToAnalyse);
-    }
 
 
 
@@ -194,7 +112,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        OpenCVLoader.initDebug();//忘记初始化了，损失惨重!
+        OpenCVLoader.initDebug();//忘记初始化了，损失惨重！
 
         tv1 = findViewById(R.id.tv1);
         btn1 = findViewById(R.id.btn1);//拍照按钮
@@ -204,126 +122,107 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         btnNext.setVisibility(View.INVISIBLE);
 
 
+        btn1.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                verifyCameraPermissions(MainActivity.this);
 
-        //拍照照片路径
-        cameraSavePath = new File(Environment.getExternalStorageDirectory().getPath() + "/" + photoName);
+                File image_file = new File(getExternalCacheDir(),System.currentTimeMillis()+".jpg");//该方法其实并没有在内存中创建文件，所以还要创建文件
+
+                try {
+                    if(image_file.exists()){
+                        image_file.delete();
+                    }
+                    image_file.createNewFile();//不加try_cache会报错
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
 
 
-        btn1.setOnClickListener(this);
-        btn2.setOnClickListener(this);
-        btnNext.setOnClickListener(this);
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                    //大于等于版本24（7.0）的场合
+                    image_uri = FileProvider.getUriForFile(
+                            getApplicationContext(),
+                            "com.example.tst.MainActivity.image_Uri",
+                            image_file);
+                } else {
+                    //小于android 版本7.0（24）的场合
+                    image_uri = Uri.fromFile(image_file);
+                }
 
 
-        // 开启一个后台线程来检查bitmap对象
 
+                Intent inte = new Intent("android.media.action.IMAGE_CAPTURE");
+                inte.putExtra(MediaStore.EXTRA_OUTPUT,image_uri);
 
+                startActivityForResult(inte,TAKE_CAMERA);
+            }
+        });
+
+        btn2.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                if (ContextCompat.checkSelfPermission(MainActivity.this,
+                        Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+                    ActivityCompat.requestPermissions(MainActivity.this, new String[]{
+                            Manifest.permission.WRITE_EXTERNAL_STORAGE}, 101);
+                } else {
+                    //打开相册
+                    Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+                    intent.addCategory(Intent.CATEGORY_OPENABLE);
+//                    intent.setType("sdcard/*"); //不可选择
+                    intent.setType("image/*");
+                    startActivityForResult(intent,PICK_PHOTO);
+                }
+
+            }
+        });
+//        btnNext.setOnClickListener(this);
 
     }
 
 
-    @Override
-    public void onClick(View v) {
-        int id = v.getId();
-        switch (id) {
-            case R.id.btn1:
-                goCamera();
-                break;
-            case R.id.btn2:
-                goPhotoAlbum();
-                break;
-            case R.id.btnNext:
-                GoToAnalyse();
-                break;
-        }
-
-    }
-
-
 
 
     @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-//        super.onActivityResult(requestCode, resultCode, data);
-
-        String photoPath;
-//        Bitmap image = null;
-
-        if (requestCode == 1 && resultCode == RESULT_OK) {
-            // 检查是否是拍照的回调
-
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                // 如果设备的Android版本高于N（Android 7.0+）
-
-                // 获取拍照后的照片路径
-                photoPath = String.valueOf(cameraSavePath);
-                // 调用 photoClip 方法裁剪照片
-                photoClip(Uri.fromFile(cameraSavePath));
-            } else {
-                // 如果设备的Android版本低于N
-
-                // 获取拍照后的照片路径
-                photoPath = image_uri.getEncodedPath();
-                // 调用 photoClip 方法裁剪照片
-                photoClip(image_uri);
-            }
-
-            Log.d("Photos", photoPath);
-            // 使用 Glide 将照片加载到 ImageView 中
-            Glide.with(MainActivity.this).load(photoPath).into(tv1);
-
-        } else if (requestCode == 2 && resultCode == RESULT_OK) {
-            // 检查是否是从相册选择照片的回调
-
-            // 获取相册选定的照片的路径
-            photoPath = getPhotoFromPhotoAlbum.getRealPathFromUri(this, data.getData());
-            Log.d("相册返回图片路径:", photoPath);
-            // 调用 photoClip 方法裁剪相册照片
-            photoClip(data.getData());
-            // 使用 Glide 将照片加载到 ImageView 中
-            Glide.with(MainActivity.this).load(photoPath).into(tv1);
-        } else if (requestCode == 3 && resultCode == RESULT_OK) {
-            // 检查是否是裁剪后的回调
-
-            Bundle bundle = data.getExtras();
-
-            if (bundle != null) {
-                // 在这里获得了裁剪后的 Bitmap 对象，可以用于上传或其他操作
-
-                image = bundle.getParcelable("data");
-//                 也可以执行一些保存、压缩等操作后再上传
-//                String path = saveImage("图片", image);
-//                Log.e("notmywrong",path);
-
-                // 将 Bitmap 设置到 ImageView 上
-                tv1.setImageBitmap(image);
-
-            }
-
-            Picasso.with(MainActivity.this).load(uritempFile).into(tv1);
-            File file = null;
-            try {
-                file = new File(new URI(uritempFile.toString()));
-            } catch (URISyntaxException e) {
-                e.printStackTrace();
-            }
-            //照片路径
-            imagePath = Objects.requireNonNull(file).getPath();
-            Log.e("notnot",imagePath);
-
-        }
+    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
+        switch (requestCode) {
+            case TAKE_CAMERA:
+                if (resultCode == RESULT_OK) {
+                    Bitmap bitmap;
+                    try {
+                        bitmap = BitmapFactory.decodeStream(getContentResolver().openInputStream(image_uri));
+                        Log.e("aloha", String.valueOf(image_uri));
+                        tv1.setImageBitmap(bitmap);//这下展示的就是一个全灰的图了
 
+                        //Intent intentToAnalyse = new Intent(this, ImageAnalysis.class);
+                        //intentToAnalyse.putExtra("image", bitmap);
+                        //startActivity(intentToAnalyse);
+                    } catch (FileNotFoundException e) {
+                        e.printStackTrace();
+                    }
+                }
+                break;
 
-        btnNext.setVisibility(View.VISIBLE);
+            case PICK_PHOTO:
+                if (resultCode == RESULT_OK) { // 判断手机系统版本号
+                    // 从相册返回的数据
+                    Log.e(this.getClass().getName(), "Result:" + data.toString());
+                    if (data != null) {
+                        // 得到图片的全路径
+                        Uri uri = data.getData();
+                        tv1.setImageURI(uri);
+                        Log.e(this.getClass().getName(), "Uri:" + String.valueOf(uri));
+                    }
 
+                }
+                break;
+
+            default:
+                break;
+        }
     }
-
-
-
-
-
-
-
 
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
@@ -332,11 +231,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         //框架要求必须这么写
         EasyPermissions.onRequestPermissionsResult(requestCode, permissions, grantResults, this);
 
-
-
     }
-
-
 
 
 }
