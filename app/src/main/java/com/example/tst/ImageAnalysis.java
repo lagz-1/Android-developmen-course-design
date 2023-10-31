@@ -41,9 +41,12 @@ import org.opencv.core.Size;
 import org.opencv.imgcodecs.Imgcodecs;
 import org.opencv.imgproc.Imgproc;
 
+import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.OutputStreamWriter;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.text.SimpleDateFormat;
@@ -85,7 +88,7 @@ public class ImageAnalysis extends AppCompatActivity implements View.OnClickList
     int flag = -1;
 
 
-    double Results_of_analysis = -2;
+    int Results_of_analysis = -2;
 
     public Bitmap getDrawable(String name) {
         ApplicationInfo appInfo = getApplicationInfo();
@@ -217,7 +220,7 @@ public class ImageAnalysis extends AppCompatActivity implements View.OnClickList
 
 
     // 在按钮点击事件处理代码中调用下面的方法
-    private void saveDoubleData() {
+    private void saveIntData() {
 
         verifyWRITE_EXTERNAL_STORAGEPermissions(ImageAnalysis.this);
         createTXTFolder();
@@ -245,33 +248,35 @@ public class ImageAnalysis extends AppCompatActivity implements View.OnClickList
         }
 
 
-        txtOutPutDir = Uri.parse("file://" + "/" + Environment.getExternalStorageDirectory().getPath() + "/txtFolder/"+ currentDateString + "_" + buttonCallCount + ".txt");
+        txtOutPutDir = Uri.parse("file://" + "/" + Environment.getExternalStorageDirectory().getPath() + "/txtFolder/"+ currentDateString + ".txt");
 
         Log.e("txtOutPutDir", String.valueOf(txtOutPutDir));
-//        // 获取外部存储目录
-//        File storageDir = Environment.getExternalStorageDirectory();
-//
-//        // 创建一个文件夹，用于存储数据文件
-//        File dataFolder = new File(storageDir, "YourDataFolderName");
-//        dataFolder.mkdirs(); // 创建文件夹（如果不存在的话）
-//
-//        // 构建文件名
-//        String fileName = currentDateString + "_Call" + buttonCallCount + ".txt";
 
 
         // 构建完整的文件路径
         File txtFile = null;
         try {
             txtFile = new File(new URI(txtOutPutDir.toString()));
-        } catch (URISyntaxException e) {
+            if (!txtFile.exists()) {
+                txtFile.createNewFile();
+            }
+        } catch (URISyntaxException | IOException e) {
             e.printStackTrace();
         }
 
         try {
             // 写入 double 数据到文件
-            FileWriter writer = new FileWriter(txtFile);
-            writer.write(String.valueOf(Results_of_analysis)); // 将 double 数据转换为字符串并写入文件
-            writer.close();
+//            FileWriter writer = new FileWriter(txtFile);
+//            writer.write(String.valueOf(Results_of_analysis)); // 将 double 数据转换为字符串并写入文件
+//            writer.close();
+
+            BufferedWriter out = new BufferedWriter(new OutputStreamWriter(
+                    new FileOutputStream(txtFile, true)));
+            out.write(String.valueOf(Results_of_analysis)); // 将 int 数据转换为字符串并写入文件
+            out.write(System.lineSeparator()); // 添加换行符
+            out.close();
+
+
             // 增加按钮被调用的次数
             buttonCallCount++;
 
@@ -359,7 +364,7 @@ public class ImageAnalysis extends AppCompatActivity implements View.OnClickList
                 btnOutPut.setVisibility(View.VISIBLE);
                 break;
             case R.id.btnOutPut:
-                saveDoubleData();
+                saveIntData();
                 btnOutPut.setVisibility(View.INVISIBLE);
                 break;
         }
