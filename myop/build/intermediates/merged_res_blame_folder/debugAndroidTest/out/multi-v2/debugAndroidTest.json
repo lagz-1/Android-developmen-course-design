@@ -1,0 +1,20 @@
+{
+    "logs": [
+        {
+            "outputFile": "D:\\AndroidProject\\tst\\myop\\build\\intermediates\\merged_res\\debugAndroidTest\\values_values.arsc.flat",
+            "map": [
+                {
+                    "source": "D:\\AndroidProject\\tst\\myop\\build\\intermediates\\packaged_res\\debug\\values\\values.xml",
+                    "from": {
+                        "startLines": "2",
+                        "startColumns": "4",
+                        "startOffsets": "55",
+                        "endLines": "9",
+                        "endColumns": "24",
+                        "endOffsets": "361"
+                    }
+                }
+            ]
+        }
+    ]
+}

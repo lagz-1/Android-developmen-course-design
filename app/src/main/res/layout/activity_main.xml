@@ -7,7 +7,7 @@
     tools:context=".MainActivity">
 
     <ImageView
-        android:layout_height="500sp"
+        android:layout_height="300sp"
         android:layout_width="match_parent"
         android:id="@+id/tv1"
 

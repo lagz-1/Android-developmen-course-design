@@ -314,47 +314,51 @@ public class ImageAnalysis extends AppCompatActivity implements View.OnClickList
         Intent intent = getIntent();
         if (intent != null) {
 
-            str = intent.getStringExtra("imagePath");
-            imgForAnalyse = new File(str);
+//            str = intent.getStringExtra("imagePath");
+//            imgForAnalyse = new File(str);
+//
+//            if (imgForAnalyse.exists()) {
+//                // 文件存在
+//                bitmapAnalyse = BitmapFactory.decodeFile(imgForAnalyse.getAbsolutePath());
+//                if (bitmapAnalyse != null) {
+//
+//                    tv2.setImageBitmap(bitmapAnalyse);
+//                } else {
+//                    // 解码失败
+//                    Toast.makeText(this, "文件格式转换失败！", Toast.LENGTH_SHORT).show();
+//                }
+//            } else {
+//                // 文件不存在
+//                Toast.makeText(this, "文件不存在！", Toast.LENGTH_SHORT).show();
+//            }
+//        }
 
-            if (imgForAnalyse.exists()) {
-                // 文件存在
-                bitmapAnalyse = BitmapFactory.decodeFile(imgForAnalyse.getAbsolutePath());
-                if (bitmapAnalyse != null) {
-
-                    tv2.setImageBitmap(bitmapAnalyse);
-                } else {
-                    // 解码失败
-                    Toast.makeText(this, "文件格式转换失败！", Toast.LENGTH_SHORT).show();
-                }
-            } else {
-                // 文件不存在
-                Toast.makeText(this, "文件不存在！", Toast.LENGTH_SHORT).show();
-            }
+            
         }
 
-        btnReturn = findViewById(R.id.btnReturn);
-        btnReturn.setOnClickListener(this);
+
+            btnReturn = findViewById(R.id.btnReturn);
+            btnReturn.setOnClickListener(this);
 
 
-        btnAnalyse = findViewById(R.id.btnAnalyse);
-        btnAnalyse.setOnClickListener(this);
+            btnAnalyse = findViewById(R.id.btnAnalyse);
+            btnAnalyse.setOnClickListener(this);
 
-        btnOutPut = findViewById(R.id.btnOutPut);
-        btnOutPut.setVisibility(View.INVISIBLE);
-        btnOutPut.setOnClickListener(this);
+            btnOutPut = findViewById(R.id.btnOutPut);
+            btnOutPut.setVisibility(View.INVISIBLE);
+            btnOutPut.setOnClickListener(this);
 
 
 // 初始化 SharedPreferences
-        sPre = getSharedPreferences("Date", Context.MODE_PRIVATE);
-        sPreInt = getSharedPreferences("count", Context.MODE_PRIVATE);
-        buttonCallCount = sPreInt.getInt("CounterValue",0);
+            sPre = getSharedPreferences("Date", Context.MODE_PRIVATE);
+            sPreInt = getSharedPreferences("count", Context.MODE_PRIVATE);
+            buttonCallCount = sPreInt.getInt("CounterValue", 0);
+
     }
 
-
     @Override
-    public void onClick(View view) {
-        int id = view.getId();
+    public void onClick(View v) {
+        int id = v.getId();
         switch (id) {
             case R.id.btnReturn:
                 finish();

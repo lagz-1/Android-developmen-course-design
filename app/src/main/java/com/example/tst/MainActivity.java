@@ -263,26 +263,34 @@ public class MainActivity extends AppCompatActivity{
     }
 
 
-    private void createTXTFolder() {
-        String folderPath = Environment.getExternalStorageDirectory().getAbsolutePath() + "/txtFolder";
+//    private void createTXTFolder() {
+//        String folderPath = Environment.getExternalStorageDirectory().getAbsolutePath() + "/txtFolder";
+//
+//        File folder = new File(folderPath);
+//
+//        if (!folder.exists()) {
+//            // 如果文件夹不存在，创建文件夹
+//            if (folder.mkdirs()) {
+//
+//                // 文件夹创建成功
+//            } else {
+//                // 文件夹创建失败
+//            }
+//        }
+//        Log.i("txtFolder",folder.getAbsolutePath());
+//
+//    }
 
+
+    private void createTXTFolder(){
+        // 获取内存文件夹路径
+        String folderPath = Environment.getExternalStorageDirectory() + "/txtFolder";
         File folder = new File(folderPath);
-
-        if (!folder.exists()) {
-            // 如果文件夹不存在，创建文件夹
-            if (folder.mkdirs()) {
-
-                // 文件夹创建成功
-            } else {
-                // 文件夹创建失败
-            }
+        if (!folder.exists()){
+            folder.mkdirs(); // 创建文件夹
         }
-        Log.i("txtFolder",folder.getAbsolutePath());
 
     }
-
-
-
 
 
 
@@ -292,8 +300,13 @@ public class MainActivity extends AppCompatActivity{
     private void saveIntData() {
 
         verifyWRITE_EXTERNAL_STORAGEPermissions(MainActivity.this);
-        createTXTFolder();
+//        createTXTFolder();
 
+        String folderPath = Environment.getExternalStorageDirectory() + "/txtFolder";
+        File folder = new File(folderPath);
+        if (!folder.exists()){
+            folder.mkdirs(); // 创建文件夹
+        }
 
         // 获取当前日期
         Date currentDate = Calendar.getInstance().getTime();
@@ -317,19 +330,24 @@ public class MainActivity extends AppCompatActivity{
         }
 
 
-        txtOutPutDir = Uri.parse("file://" + "/" + Environment.getExternalStorageDirectory().getPath() + "/txtFolder/"+ currentDateString + ".txt");
+//        txtOutPutDir = Uri.parse("file://" + "/" + Environment.getExternalStorageDirectory().getPath() + "/txtFolder/"+ currentDateString + ".txt");
 
-        Log.e("txtOutPutDir", String.valueOf(txtOutPutDir));
+        String filePath = Environment.getExternalStorageDirectory() + "/txtFolder/"+currentDateString+".txt";
+
+
+        Log.e("txtOutPutDir", filePath);
 
 
         // 构建完整的文件路径
         File txtFile = null;
         try {
-            txtFile = new File(new URI(txtOutPutDir.toString()));
+            txtFile = new File(filePath);
+//            txtFile = new File(new URI(txtOutPutDir.toString()));
             if (!txtFile.exists()) {
                 txtFile.createNewFile();
             }
-        } catch (URISyntaxException | IOException e) {
+//        } catch (URISyntaxException | IOException e) {
+        } catch (IOException e) {
             e.printStackTrace();
         }
 
@@ -503,6 +521,7 @@ public class MainActivity extends AppCompatActivity{
             @Override
             public void onClick(View view) {
                 Results_of_analysis = Analyse(bitmapAnalyse);
+                Log.e("hdjhf", String.valueOf(Results_of_analysis));
                 btnOutPut.setVisibility(View.VISIBLE);
             }
         });
@@ -548,6 +567,7 @@ public class MainActivity extends AppCompatActivity{
                     } catch (FileNotFoundException e) {
                         e.printStackTrace();
                     }
+                    btn3.setVisibility(View.VISIBLE);
                     btnNext.setVisibility(View.VISIBLE);
                 }
                 break;
@@ -568,6 +588,7 @@ public class MainActivity extends AppCompatActivity{
                         tv1.setImageBitmap(bitmapAnalyse);
                         Log.e("okiamfine", "Uri:" + String.valueOf(image_uri));
                     }
+                    btn3.setVisibility(View.VISIBLE);
                     btnNext.setVisibility(View.VISIBLE);
                 }
                 break;

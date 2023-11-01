@@ -66,4 +66,7 @@ dependencies {
     implementation 'pub.devrel:easypermissions:3.0.0'
 
     implementation 'com.github.yalantis:ucrop:2.2.4'
+
+    //analysis
+    implementation 'com.github.lecho:hellocharts-library:1.5.8@aar'
 }

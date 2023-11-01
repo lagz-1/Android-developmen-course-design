@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+xmlns:tools="http://schemas.android.com/tools"
+android:layout_width="wrap_content"
+android:layout_height="wrap_content"
+android:orientation="vertical"
+android:padding="6dp"
+tools:context=".FenXi"    >
+
+<TableLayout
+    android:id="@+id/tableLayout"
+    android:layout_width="match_parent"
+    android:layout_height="900dp"
+    android:stretchColumns="*">
+
+    <TableRow>
+
+        <TextView
+            android:layout_height="50dp"
+            android:layout_width="6dp"
+            android:text="文档打开次数"
+            android:textSize="24sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/tvOpenCount"
+            android:layout_height="50dp"
+            android:layout_width="6dp"
+            android:textSize="24sp"
+            android:text="-" />
+    </TableRow>
+
+    <TableRow>
+
+        <TextView
+            android:text="黑度数值"
+            android:layout_height="50dp"
+            android:layout_width="6dp"
+            android:textSize="24sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/tvBlackness"
+            android:layout_height="50dp"
+            android:textSize="24sp"
+            android:layout_width="6dp"
+            android:text="-" />
+    </TableRow>
+    <TableRow>
+
+        <TextView
+            android:layout_height="50dp"
+            android:layout_width="6dp"
+            android:textSize="24sp"
+            android:text="颜色"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/tvcolor"
+            android:layout_height="50dp"
+            android:layout_width="12dp"
+            android:textSize="24sp"
+            android:text="-" />
+    </TableRow>
+    <TableRow>
+
+        <TextView
+            android:layout_height="300dp"
+            android:layout_width="6dp"
+            android:textSize="24sp"
+            android:text="数据分析"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/tvDataAnalysis"
+            android:layout_height="300dp"
+            android:layout_width="12dp"
+            android:textSize="24sp"
+            android:text="-" />
+    </TableRow>
+
+</TableLayout>
+
+</LinearLayout>
