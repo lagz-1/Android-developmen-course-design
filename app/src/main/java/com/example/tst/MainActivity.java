@@ -8,6 +8,7 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
+import android.content.pm.ResolveInfo;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.net.Uri;
@@ -30,7 +31,9 @@ import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.core.content.FileProvider;
 
+import com.bumptech.glide.Glide;
 import com.squareup.picasso.Picasso;
+import com.yalantis.ucrop.UCrop;
 
 import org.opencv.android.OpenCVLoader;
 import org.opencv.android.Utils;
@@ -69,7 +72,7 @@ public class MainActivity extends AppCompatActivity{
 
     Button btnReturn, btnAnalyse, btnOutPut;
 
-    Uri image_uri;
+    Uri image_uri,fileUri;
 
 
     //申请录音权限
@@ -92,6 +95,11 @@ public class MainActivity extends AppCompatActivity{
             Manifest.permission.READ_EXTERNAL_STORAGE
     };
 
+    private static final int GET_RECODE_MANAGE_EXTERNAL_STORAGE = 1;
+    private static String[] PERMISSION_MANAGE_EXTERNAL_STORAGE = {
+            Manifest.permission.MANAGE_EXTERNAL_STORAGE
+    };
+
     public static final int TAKE_CAMERA = 101;
     public static final int PICK_PHOTO = 102;
     public static final int CROP_REQUEST_CODE = 103;
@@ -101,7 +109,6 @@ public class MainActivity extends AppCompatActivity{
 
     private SharedPreferences sPre,sPreInt;
 
-    Uri uritempFile;
 
     String photoName;
 
@@ -235,64 +242,20 @@ public class MainActivity extends AppCompatActivity{
         }
     }
 
-
-    //该方法，传入我们拿到的照片的 uri 进行激活 Android 系统的裁剪界面。我是在 onActivityResult 内进行调用该方法。
-    //该方法，传入我们拿到的照片的 uri 进行激活 Android 系统的裁剪界面。我是在 onActivityResult 内进行调用该方法。
-    private void photoClip(Uri uri) {
-        // 调用系统中自带的图片剪裁
-        Intent intent = new Intent("com.android.camera.action.CROP");
-        intent.setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
-        intent.setDataAndType(uri, "image/*");
-        // 下面这个crop=true是设置在开启的Intent中设置显示的VIEW可裁剪
-        intent.putExtra("crop", "true");
-        // aspectX aspectY 是宽高的比例
-        intent.putExtra("aspectX", 1);
-        intent.putExtra("aspectY", 1);
-        // outputX outputY 是裁剪图片宽高
-        intent.putExtra("outputX", 150);
-        intent.putExtra("outputY", 150);
-        intent.putExtra("return-data", false);
-
-
-//        uritempFile = Uri.parse("file://" + "/" + Environment.getExternalStorageDirectory().getPath() + "/" + System.currentTimeMillis() + ".jpg");
-        uritempFile = Uri.fromFile(new File("file://" + "/" + Environment.getExternalStorageDirectory().getPath() + "/" +System.currentTimeMillis() + ".jpg"));
-
-        Log.e("uritempFile", String.valueOf(uritempFile));
-        intent.putExtra(MediaStore.EXTRA_OUTPUT, uritempFile);
-        intent.putExtra("outputFormat", Bitmap.CompressFormat.JPEG.toString());
-        intent.putExtra("noFaceDetection", true);
-
-
-        startActivityForResult(intent, CROP_REQUEST_CODE);
-    }
-
-
-
-
-
-
-
-    private Bitmap scaleBitmap(Bitmap bitmap, int maxWidth, int maxHeight) {
-        int width = bitmap.getWidth();
-        int height = bitmap.getHeight();
-
-        if (width > maxWidth || height > maxHeight) {
-            float scale = Math.min(((float) maxWidth / width), ((float) maxHeight / height));
-            Matrix matrix = new Matrix();
-            matrix.postScale(scale, scale);
-
-            return Bitmap.createBitmap(bitmap, 0, 0, width, height, matrix, true);
+    public static void verifyMANAGE_ALL_FILES_ACCESSPermissions(Activity activity) {
+        int permission = ActivityCompat.checkSelfPermission(activity,
+                Manifest.permission.MANAGE_EXTERNAL_STORAGE);
+        if (permission != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(activity, PERMISSION_MANAGE_EXTERNAL_STORAGE,
+                    GET_RECODE_MANAGE_EXTERNAL_STORAGE);
         }
-
-        return bitmap;
     }
-
-
 
     private void GoToAnalyse(){
 
         btn1.setVisibility(View.INVISIBLE);
         btn2.setVisibility(View.INVISIBLE);
+        btn3.setVisibility(View.INVISIBLE);
         btnNext.setVisibility(View.INVISIBLE);
 
         btnAnalyse.setVisibility(View.VISIBLE);
@@ -371,11 +334,6 @@ public class MainActivity extends AppCompatActivity{
         }
 
         try {
-            // 写入 double 数据到文件
-//            FileWriter writer = new FileWriter(txtFile);
-//            writer.write(String.valueOf(Results_of_analysis)); // 将 double 数据转换为字符串并写入文件
-//            writer.close();
-
             BufferedWriter out = new BufferedWriter(new OutputStreamWriter(
                     new FileOutputStream(txtFile, true)));
             out.write(String.valueOf(Results_of_analysis)); // 将 int 数据转换为字符串并写入文件
@@ -410,7 +368,7 @@ public class MainActivity extends AppCompatActivity{
         btn1 = findViewById(R.id.btn1);//拍照按钮
         btn2 = findViewById(R.id.btn2);//调用相册按钮
         btn3 = findViewById(R.id.btn3);//调用裁剪按钮
-        btn3.setVisibility(View.INVISIBLE);
+//        btn3.setVisibility(View.INVISIBLE);
 
         btnNext = findViewById(R.id.btnNext);
         btnNext.setVisibility(View.INVISIBLE);
@@ -477,13 +435,29 @@ public class MainActivity extends AppCompatActivity{
         btn3.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                if(image_uri!=null){
-                    // 生成裁剪后的文件URI
-//                    File outputDirectory = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS);
-//                    File outputFile = new File(outputDirectory, System.currentTimeMillis()+".jpg");
-//                    Uri outputUri = FileProvider.getUriForFile(MainActivity.this, "com.example.tst.MainActivity.fileprovider", outputFile);
 
-                    photoClip(image_uri);
+                verifyWRITE_EXTERNAL_STORAGEPermissions(MainActivity.this);
+
+                if(image_uri!=null){
+                    String filename = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.CHINA)
+                            .format(new Date()) + ".jpg";
+
+
+//                    File file = new File(Environment.getExternalStorageDirectory(), filename);
+//                    fileUri = FileProvider.getUriForFile(MainActivity.this, "com.example.tst.MainActivity.image_Uri", file);
+
+//                    String packageName = getPackageName();
+//                    grantUriPermission(packageName, fileUri, Intent.FLAG_GRANT_READ_URI_PERMISSION
+//                            | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
+
+                    UCrop.of(image_uri, fileUri)
+                            .start(MainActivity.this);
+
+                    Uri mDestinationUri = Uri.fromFile(new File(getCacheDir(),filename));
+
+                    UCrop uCrop = UCrop.of(image_uri, mDestinationUri);
+                    uCrop.start(MainActivity.this);
+
                 }
                 else{
                     Toast.makeText(MainActivity.this, "请先选择照片!", Toast.LENGTH_SHORT).show();
@@ -549,6 +523,8 @@ public class MainActivity extends AppCompatActivity{
         sPreInt = getSharedPreferences("count", Context.MODE_PRIVATE);
         buttonCallCount = sPreInt.getInt("CounterValue", 0);
 
+
+
     }
 
 
@@ -596,29 +572,32 @@ public class MainActivity extends AppCompatActivity{
                 }
                 break;
 
-            case CROP_REQUEST_CODE:     //调用剪裁后返回
+            case UCrop.REQUEST_CROP:     //调用剪裁后返回
             {
-                Bitmap bitmap;
-                try {
-                    bitmap = BitmapFactory.decodeStream(getContentResolver().openInputStream(uritempFile));
-                } catch (FileNotFoundException e) {
-                    throw new RuntimeException(e);
-                }
-                tv1.setImageBitmap(bitmap);
+                if (resultCode == RESULT_OK) {
+                    final Uri resultUri = UCrop.getOutput(data);
+                    if(resultUri==null){Log.e("whoyouare", "whoyouare");}
+                        else {Log.e("whoyouare", String.valueOf(resultUri));}
 
-                Picasso.with(MainActivity.this).load(uritempFile).into(tv1);
-                File file = null;
-                try {
-                    file = new File(new URI(uritempFile.toString()));
-                } catch (URISyntaxException e) {
-                    e.printStackTrace();
+                        Bitmap bitmap;
+                    try {
+                        bitmap = BitmapFactory.decodeStream(getContentResolver().openInputStream(resultUri));
+
+                    } catch (FileNotFoundException e) {
+                        throw new RuntimeException(e);
+                    }
+                    tv1.setImageBitmap(bitmap);
+
                 }
-                //照片路径
-                String imagePath = Objects.requireNonNull(file).getPath();
-                Log.e("notnot",imagePath);
-                }
+            }
                 break;
 
+            case UCrop.RESULT_ERROR:
+            {
+                final Throwable cropError = UCrop.getError(data);
+                Log.e("gg","gg了");
+            }
+            break;
         }
     }
 
