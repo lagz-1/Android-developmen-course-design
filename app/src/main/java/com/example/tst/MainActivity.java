@@ -1,6 +1,27 @@
 package com.example.tst;
-import com.bumptech.glide.Glide;
-import com.squareup.picasso.Picasso;
+
+import android.Manifest;
+import android.annotation.SuppressLint;
+import android.app.Activity;
+import android.content.Context;
+import android.content.Intent;
+import android.content.SharedPreferences;
+import android.content.pm.ApplicationInfo;
+import android.content.pm.PackageManager;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.net.Uri;
+import android.os.Build;
+import android.os.Bundle;
+import android.os.Environment;
+import android.provider.MediaStore;
+import android.util.Log;
+import android.view.View;
+import android.widget.Button;
+import android.widget.ImageView;
+import android.widget.Toast;
+import android.graphics.Matrix;
+
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -9,43 +30,44 @@ import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.core.content.FileProvider;
 
-import android.Manifest;
-import android.annotation.SuppressLint;
-import android.app.Activity;
-import android.content.Intent;
-import android.content.pm.PackageManager;
-import android.graphics.BitmapFactory;
-import android.os.Build;
-import android.os.Environment;
-import android.os.Bundle;
-import android.util.Log;
-import android.graphics.Bitmap;
-import android.net.Uri;
-import android.provider.MediaStore;
-import android.view.View;
-import android.widget.Button;
-import android.widget.ImageView;
-import android.database.Cursor;
-import android.provider.DocumentsContract;
-import android.content.ContentUris;
-import android.widget.Toast;
+import com.squareup.picasso.Picasso;
 
 import org.opencv.android.OpenCVLoader;
+import org.opencv.android.Utils;
+import org.opencv.core.Core;
+import org.opencv.core.CvType;
+import org.opencv.core.Mat;
+import org.opencv.core.MatOfFloat;
+import org.opencv.core.MatOfInt;
+import org.opencv.imgproc.Imgproc;
 
+import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileNotFoundException;
-import java.io.IOException;
 import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.ByteArrayOutputStream;
+import java.io.OutputStreamWriter;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.List;
+import java.util.Locale;
 import java.util.Objects;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import pub.devrel.easypermissions.EasyPermissions;
 
 public class MainActivity extends AppCompatActivity{
 
     ImageView tv1;
-    Button btn1, btn2,btnNext;
+    Button btn1, btn2,btn3,btnNext;
+
+    Button btnReturn, btnAnalyse, btnOutPut;
 
     Uri image_uri;
 
@@ -63,6 +85,8 @@ public class MainActivity extends AppCompatActivity{
 
 
 
+
+
     private static final int GET_RECODE_READ_EXTERNAL_STORAGE = 1;
     private static String[] PERMISSION_READ_EXTERNAL_STORAGE = {
             Manifest.permission.READ_EXTERNAL_STORAGE
@@ -70,6 +94,114 @@ public class MainActivity extends AppCompatActivity{
 
     public static final int TAKE_CAMERA = 101;
     public static final int PICK_PHOTO = 102;
+    public static final int CROP_REQUEST_CODE = 103;
+
+    Bitmap bitmapAnalyse;
+    String[] comparedPic = new String[]{"white", "pic_20_rank1", "pic_40_rank2", "pic_60_rank3", "pic_80_rank4", "black"};
+
+    private SharedPreferences sPre,sPreInt;
+
+    Uri uritempFile;
+
+    String photoName;
+
+    int flag = -1;
+
+
+    int Results_of_analysis = -2;
+
+    private int buttonCallCount;
+    private  Uri txtOutPutDir;
+
+    public Bitmap getDrawable(String name) {
+        ApplicationInfo appInfo = getApplicationInfo();
+        int resID = getResources().getIdentifier(name, "drawable", appInfo.packageName);
+        //解析资源文件夹下，id为resID的图片
+        return BitmapFactory.decodeResource(getResources(), resID);
+    }
+
+    public Mat getDrawableToMat(Bitmap bitmap) {
+        Mat matOp = new Mat(bitmap.getHeight(), bitmap.getWidth(), CvType.CV_8U);
+        Utils.bitmapToMat(bitmap, matOp);
+        return matOp;
+
+    }
+
+//    // 计算结构相似性指数（SSIM）
+//    private static double calculateSSIM(Mat image1, Mat image2) {
+//        MatOfFloat ssimMat = new MatOfFloat();
+//        Imgproc.matchTemplate(image1, image2, ssimMat, Imgproc.CV_COMP_CORREL);
+//        Scalar ssimScalar = Core.mean(ssimMat);
+//        return ssimScalar.val[0];
+//    }
+
+
+    public static double compareHist(Mat src_1, Mat src_2) {//src_1:matOp  src_2:matCompared
+
+//        Imgproc.cvtColor(src_2, src_2,Imgproc.COLOR_BGR2GRAY);//转化为灰度图
+
+//        Imgproc.resize(src_1, src_1, src_2.size());
+//        Imgproc.resize(src_2, src_2, src_1.size());
+
+        Mat hvs_1 = new Mat();
+        Mat hvs_2 = new Mat();
+//        //图片转HSV
+        Imgproc.cvtColor(src_1, hvs_1, Imgproc.COLOR_BGR2HSV);
+        Imgproc.cvtColor(src_2, hvs_2, Imgproc.COLOR_BGR2HSV);
+
+
+        List<Mat> channels1 = new ArrayList<>();
+        Core.split(hvs_1, channels1); // 将HSV图像拆分为通道
+        Mat hist_1 = channels1.get(0); // 提取色调通道
+
+        List<Mat> channels2 = new ArrayList<>();
+        Core.split(hvs_1, channels2); // 将HSV图像拆分为通道
+        Mat hist_2 = channels2.get(0); // 提取色调通道
+
+
+//        Mat hist_1 = new Mat();
+//        Mat hist_2 = new Mat();
+
+        //直方图计算
+        Imgproc.calcHist(Stream.of(src_1).collect(Collectors.toList()), new MatOfInt(0), new Mat(), hist_1, new MatOfInt(255), new MatOfFloat(0, 256));
+        Imgproc.calcHist(Stream.of(src_2).collect(Collectors.toList()), new MatOfInt(0), new Mat(), hist_2, new MatOfInt(255), new MatOfFloat(0, 256));
+
+        //图片归一化
+        Core.normalize(hist_1, hist_1, 1, hist_1.rows(), Core.NORM_MINMAX, -1, new Mat());
+        Core.normalize(hist_2, hist_2, 1, hist_2.rows(), Core.NORM_MINMAX, -1, new Mat());
+
+        //直方图比较
+//        double a = Imgproc.compareHist(hist_1,hist_1,Imgproc.CV_COMP_CORREL);
+        double b = Imgproc.compareHist(hist_1, hist_2, Imgproc.CV_COMP_CORREL);
+//        System.out.println("越接近1越相识度越高");
+//        System.out.println("同一张图片\t比较结果(相识度)："+a);
+//        System.out.println("不同图片\t比较结果(相识度)："+b);
+
+        return b;
+
+    }
+
+
+    public int Analyse(Bitmap bitmap) {
+        Mat matOp = new Mat(bitmap.getHeight(), bitmap.getWidth(), CvType.CV_8U);
+        Utils.bitmapToMat(bitmap, matOp);
+//        Imgproc.cvtColor(matOp, matOp, Imgproc.COLOR_BGR2GRAY); // 转换为灰度图
+
+        double maxsimilarity = -2;
+
+        for (int i = 0; i < 6; i++) {
+            Mat matCompared = getDrawableToMat(getDrawable(comparedPic[i]));
+
+            double Hist = compareHist(matOp, matCompared);
+            Log.e("hhhh", String.valueOf(Hist)+" "+comparedPic[i]);
+            if (Hist > maxsimilarity) {
+                flag = i;
+                maxsimilarity = Hist;
+            }
+        }
+        return flag;
+    }
+
 
     /*
      * 申请拍照权限*/
@@ -104,6 +236,166 @@ public class MainActivity extends AppCompatActivity{
     }
 
 
+    //该方法，传入我们拿到的照片的 uri 进行激活 Android 系统的裁剪界面。我是在 onActivityResult 内进行调用该方法。
+    //该方法，传入我们拿到的照片的 uri 进行激活 Android 系统的裁剪界面。我是在 onActivityResult 内进行调用该方法。
+    private void photoClip(Uri uri) {
+        // 调用系统中自带的图片剪裁
+        Intent intent = new Intent("com.android.camera.action.CROP");
+        intent.setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
+        intent.setDataAndType(uri, "image/*");
+        // 下面这个crop=true是设置在开启的Intent中设置显示的VIEW可裁剪
+        intent.putExtra("crop", "true");
+        // aspectX aspectY 是宽高的比例
+        intent.putExtra("aspectX", 1);
+        intent.putExtra("aspectY", 1);
+        // outputX outputY 是裁剪图片宽高
+        intent.putExtra("outputX", 150);
+        intent.putExtra("outputY", 150);
+        intent.putExtra("return-data", false);
+
+
+//        uritempFile = Uri.parse("file://" + "/" + Environment.getExternalStorageDirectory().getPath() + "/" + System.currentTimeMillis() + ".jpg");
+        uritempFile = Uri.fromFile(new File("file://" + "/" + Environment.getExternalStorageDirectory().getPath() + "/" +System.currentTimeMillis() + ".jpg"));
+
+        Log.e("uritempFile", String.valueOf(uritempFile));
+        intent.putExtra(MediaStore.EXTRA_OUTPUT, uritempFile);
+        intent.putExtra("outputFormat", Bitmap.CompressFormat.JPEG.toString());
+        intent.putExtra("noFaceDetection", true);
+
+
+        startActivityForResult(intent, CROP_REQUEST_CODE);
+    }
+
+
+
+
+
+
+
+    private Bitmap scaleBitmap(Bitmap bitmap, int maxWidth, int maxHeight) {
+        int width = bitmap.getWidth();
+        int height = bitmap.getHeight();
+
+        if (width > maxWidth || height > maxHeight) {
+            float scale = Math.min(((float) maxWidth / width), ((float) maxHeight / height));
+            Matrix matrix = new Matrix();
+            matrix.postScale(scale, scale);
+
+            return Bitmap.createBitmap(bitmap, 0, 0, width, height, matrix, true);
+        }
+
+        return bitmap;
+    }
+
+
+
+    private void GoToAnalyse(){
+
+        btn1.setVisibility(View.INVISIBLE);
+        btn2.setVisibility(View.INVISIBLE);
+        btnNext.setVisibility(View.INVISIBLE);
+
+        btnAnalyse.setVisibility(View.VISIBLE);
+        btnReturn.setVisibility(View.VISIBLE);
+    }
+
+
+    private void createTXTFolder() {
+        String folderPath = Environment.getExternalStorageDirectory().getAbsolutePath() + "/txtFolder";
+
+        File folder = new File(folderPath);
+
+        if (!folder.exists()) {
+            // 如果文件夹不存在，创建文件夹
+            if (folder.mkdirs()) {
+
+                // 文件夹创建成功
+            } else {
+                // 文件夹创建失败
+            }
+        }
+        Log.i("txtFolder",folder.getAbsolutePath());
+
+    }
+
+
+
+
+
+
+
+
+    // 在按钮点击事件处理代码中调用下面的方法
+    private void saveIntData() {
+
+        verifyWRITE_EXTERNAL_STORAGEPermissions(MainActivity.this);
+        createTXTFolder();
+
+
+        // 获取当前日期
+        Date currentDate = Calendar.getInstance().getTime();
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy.MM.dd", Locale.CHINA);
+        String currentDateString = sdf.format(currentDate);
+        Log.e("today",currentDateString);
+
+
+        // 获取存储的日期
+        String savedDateString = sPre.getString("LastResetDate", "");
+
+
+        // 如果当前日期与存储的日期不同，说明已经过了一天，重置按钮被调用的次数
+        if (!currentDateString.equals(savedDateString)) {
+            buttonCallCount = 0; // 重置按钮被调用的次数
+            // 保存当前日期作为上次重置日期
+            SharedPreferences.Editor editor = sPre.edit();
+            editor.putString("LastResetDate", currentDateString);
+            editor.apply();
+
+        }
+
+
+        txtOutPutDir = Uri.parse("file://" + "/" + Environment.getExternalStorageDirectory().getPath() + "/txtFolder/"+ currentDateString + ".txt");
+
+        Log.e("txtOutPutDir", String.valueOf(txtOutPutDir));
+
+
+        // 构建完整的文件路径
+        File txtFile = null;
+        try {
+            txtFile = new File(new URI(txtOutPutDir.toString()));
+            if (!txtFile.exists()) {
+                txtFile.createNewFile();
+            }
+        } catch (URISyntaxException | IOException e) {
+            e.printStackTrace();
+        }
+
+        try {
+            // 写入 double 数据到文件
+//            FileWriter writer = new FileWriter(txtFile);
+//            writer.write(String.valueOf(Results_of_analysis)); // 将 double 数据转换为字符串并写入文件
+//            writer.close();
+
+            BufferedWriter out = new BufferedWriter(new OutputStreamWriter(
+                    new FileOutputStream(txtFile, true)));
+            out.write(String.valueOf(Results_of_analysis)); // 将 int 数据转换为字符串并写入文件
+            out.write(System.lineSeparator()); // 添加换行符
+            out.close();
+
+
+            // 增加按钮被调用的次数
+            buttonCallCount++;
+
+            SharedPreferences.Editor editorInt = sPreInt.edit();
+            editorInt.putInt("CounterValue", buttonCallCount);
+            editorInt.apply();
+
+            Log.e("btnInfo",String.valueOf(buttonCallCount));
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
 
 
     @SuppressLint("MissingInflatedId")
@@ -117,9 +409,12 @@ public class MainActivity extends AppCompatActivity{
         tv1 = findViewById(R.id.tv1);
         btn1 = findViewById(R.id.btn1);//拍照按钮
         btn2 = findViewById(R.id.btn2);//调用相册按钮
+        btn3 = findViewById(R.id.btn3);//调用裁剪按钮
+        btn3.setVisibility(View.INVISIBLE);
 
         btnNext = findViewById(R.id.btnNext);
         btnNext.setVisibility(View.INVISIBLE);
+
 
 
         btn1.setOnClickListener(new View.OnClickListener() {
@@ -127,7 +422,8 @@ public class MainActivity extends AppCompatActivity{
             public void onClick(View view) {
                 verifyCameraPermissions(MainActivity.this);
 
-                File image_file = new File(getExternalCacheDir(),System.currentTimeMillis()+".jpg");//该方法其实并没有在内存中创建文件，所以还要创建文件
+                photoName = System.currentTimeMillis()+".jpg";
+                File image_file = new File(getExternalCacheDir(),photoName);//该方法其实并没有在内存中创建文件，所以还要创建文件
 
                 try {
                     if(image_file.exists()){
@@ -177,9 +473,86 @@ public class MainActivity extends AppCompatActivity{
 
             }
         });
-//        btnNext.setOnClickListener(this);
+
+        btn3.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                if(image_uri!=null){
+                    // 生成裁剪后的文件URI
+//                    File outputDirectory = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS);
+//                    File outputFile = new File(outputDirectory, System.currentTimeMillis()+".jpg");
+//                    Uri outputUri = FileProvider.getUriForFile(MainActivity.this, "com.example.tst.MainActivity.fileprovider", outputFile);
+
+                    photoClip(image_uri);
+                }
+                else{
+                    Toast.makeText(MainActivity.this, "请先选择照片!", Toast.LENGTH_SHORT).show();
+                }
+
+
+            }
+        });
+
+
+        btnNext.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                GoToAnalyse();
+            }
+        });
+
+
+        btnReturn = findViewById(R.id.btnReturn);
+        btnReturn.setVisibility(View.INVISIBLE);
+        btnReturn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                image_uri = null;
+
+                btnReturn.setVisibility(View.INVISIBLE);
+                btnAnalyse.setVisibility(View.INVISIBLE);
+                btnOutPut.setVisibility(View.INVISIBLE);
+
+                btn1.setVisibility(View.VISIBLE);
+                btn2.setVisibility(View.VISIBLE);
+                btnNext.setVisibility(View.INVISIBLE);
+
+                tv1.setImageBitmap(null);
+
+            }
+        });
+
+
+        btnAnalyse = findViewById(R.id.btnAnalyse);
+        btnAnalyse.setVisibility(View.INVISIBLE);
+        btnAnalyse.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                Results_of_analysis = Analyse(bitmapAnalyse);
+                btnOutPut.setVisibility(View.VISIBLE);
+            }
+        });
+
+        btnOutPut = findViewById(R.id.btnOutPut);
+        btnOutPut.setVisibility(View.INVISIBLE);
+        btnOutPut.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                saveIntData();
+                btnOutPut.setVisibility(View.INVISIBLE);
+            }
+        });
+
+
+// 初始化 SharedPreferences
+        sPre = getSharedPreferences("Date", Context.MODE_PRIVATE);
+        sPreInt = getSharedPreferences("count", Context.MODE_PRIVATE);
+        buttonCallCount = sPreInt.getInt("CounterValue", 0);
 
     }
+
+
+
 
 
 
@@ -194,14 +567,12 @@ public class MainActivity extends AppCompatActivity{
                     try {
                         bitmap = BitmapFactory.decodeStream(getContentResolver().openInputStream(image_uri));
                         Log.e("aloha", String.valueOf(image_uri));
-                        tv1.setImageBitmap(bitmap);//这下展示的就是一个全灰的图了
-
-                        //Intent intentToAnalyse = new Intent(this, ImageAnalysis.class);
-                        //intentToAnalyse.putExtra("image", bitmap);
-                        //startActivity(intentToAnalyse);
+                        bitmapAnalyse = bitmap;
+                        tv1.setImageBitmap(bitmap);
                     } catch (FileNotFoundException e) {
                         e.printStackTrace();
                     }
+                    btnNext.setVisibility(View.VISIBLE);
                 }
                 break;
 
@@ -211,16 +582,43 @@ public class MainActivity extends AppCompatActivity{
                     Log.e(this.getClass().getName(), "Result:" + data.toString());
                     if (data != null) {
                         // 得到图片的全路径
-                        Uri uri = data.getData();
-                        tv1.setImageURI(uri);
-                        Log.e(this.getClass().getName(), "Uri:" + String.valueOf(uri));
+                        image_uri = data.getData();
+                        try {
+                            bitmapAnalyse = BitmapFactory.decodeStream(getContentResolver().openInputStream(image_uri));
+                        } catch (FileNotFoundException e) {
+                            throw new RuntimeException(e);
+                        }
+//                        tv1.setImageURI(image_uri);
+                        tv1.setImageBitmap(bitmapAnalyse);
+                        Log.e("okiamfine", "Uri:" + String.valueOf(image_uri));
                     }
-
+                    btnNext.setVisibility(View.VISIBLE);
                 }
                 break;
 
-            default:
+            case CROP_REQUEST_CODE:     //调用剪裁后返回
+            {
+                Bitmap bitmap;
+                try {
+                    bitmap = BitmapFactory.decodeStream(getContentResolver().openInputStream(uritempFile));
+                } catch (FileNotFoundException e) {
+                    throw new RuntimeException(e);
+                }
+                tv1.setImageBitmap(bitmap);
+
+                Picasso.with(MainActivity.this).load(uritempFile).into(tv1);
+                File file = null;
+                try {
+                    file = new File(new URI(uritempFile.toString()));
+                } catch (URISyntaxException e) {
+                    e.printStackTrace();
+                }
+                //照片路径
+                String imagePath = Objects.requireNonNull(file).getPath();
+                Log.e("notnot",imagePath);
+                }
                 break;
+
         }
     }
 

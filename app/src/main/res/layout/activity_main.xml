@@ -39,8 +39,52 @@
         app:layout_constraintTop_toBottomOf="@+id/btn2"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
+        android:id="@+id/btn3"
+        tools:ignore="MissingConstraints"
+        android:text="裁剪" />
+
+    <Button
+        android:layout_width="150sp"
+        android:layout_height="wrap_content"
+        app:layout_constraintTop_toBottomOf="@+id/btn3"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
         android:id="@+id/btnNext"
         tools:ignore="MissingConstraints"
         android:text="下一步" />
+
+    <Button
+        android:layout_width="150sp"
+        android:layout_height="wrap_content"
+        android:text="分析"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/tv1"
+        android:layout_marginTop="20dp"
+        android:id="@+id/btnAnalyse"
+        tools:ignore="MissingConstraints" />
+
+
+    <Button
+        android:layout_width="150sp"
+        android:layout_height="wrap_content"
+        android:text="返回上个界面"
+        app:layout_constraintBottom_toBottomOf="parent"
+        android:layout_margin="100sp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        android:id="@+id/btnReturn"
+        tools:ignore="MissingConstraints" />
+
+    <Button
+        android:layout_width="150sp"
+        android:layout_height="wrap_content"
+        android:text="导出数据"
+        app:layout_constraintTop_toBottomOf="@id/btnReturn"
+        android:layout_margin="20dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        android:id="@+id/btnOutPut"
+        tools:ignore="MissingConstraints" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>
