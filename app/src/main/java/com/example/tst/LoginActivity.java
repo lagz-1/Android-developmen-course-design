@@ -57,7 +57,7 @@ public class LoginActivity extends AppCompatActivity {
                 if (flag!=0){
                     Toast.makeText(getApplicationContext(), "登录成功！", Toast.LENGTH_SHORT).show();//显示登录成功的弹窗，简单写法
                     Intent intent = null;  //这个变量初始申明为空
-                    intent = new Intent(LoginActivity.this, MainActivity.class);
+                    intent = new Intent(LoginActivity.this, rest.class);
                     startActivity(intent);
                 }
                 else {

@@ -13,7 +13,7 @@ tools:context=".show">
     android:layout_weight="1"
     android:layout_width="300dp"
     android:layout_gravity="center_horizontal"
-    android:text="线性图"
+    android:text="折线图"
     />
 <Button
     android:id="@+id/analyseButton"

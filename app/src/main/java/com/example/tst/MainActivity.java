@@ -8,7 +8,6 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
-import android.content.pm.ResolveInfo;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.net.Uri;
@@ -21,7 +20,6 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.Toast;
-import android.graphics.Matrix;
 
 
 import androidx.annotation.NonNull;
@@ -31,8 +29,6 @@ import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.core.content.FileProvider;
 
-import com.bumptech.glide.Glide;
-import com.squareup.picasso.Picasso;
 import com.yalantis.ucrop.UCrop;
 
 import org.opencv.android.OpenCVLoader;
@@ -49,17 +45,13 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.ByteArrayOutputStream;
 import java.io.OutputStreamWriter;
-import java.net.URI;
-import java.net.URISyntaxException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
-import java.util.Objects;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -70,10 +62,10 @@ public class MainActivity extends AppCompatActivity{
     ImageView tv1;
     Button btn1, btn2,btn3,btnNext;
 
-    Button btnReturn, btnAnalyse, btnOutPut;
+    Button btnReturn, btnAnalyse, btnOutPut,btnShare;
 
     Uri image_uri,fileUri;
-
+    Uri resultUri;
 
     //申请录音权限
     private static final int GET_RECODE_CAMERA = 1;
@@ -118,7 +110,8 @@ public class MainActivity extends AppCompatActivity{
     int Results_of_analysis = -2;
 
     private int buttonCallCount;
-    private  Uri txtOutPutDir;
+
+    File image_file;
 
     public Bitmap getDrawable(String name) {
         ApplicationInfo appInfo = getApplicationInfo();
@@ -134,13 +127,6 @@ public class MainActivity extends AppCompatActivity{
 
     }
 
-//    // 计算结构相似性指数（SSIM）
-//    private static double calculateSSIM(Mat image1, Mat image2) {
-//        MatOfFloat ssimMat = new MatOfFloat();
-//        Imgproc.matchTemplate(image1, image2, ssimMat, Imgproc.CV_COMP_CORREL);
-//        Scalar ssimScalar = Core.mean(ssimMat);
-//        return ssimScalar.val[0];
-//    }
 
 
     public static double compareHist(Mat src_1, Mat src_2) {//src_1:matOp  src_2:matCompared
@@ -256,30 +242,13 @@ public class MainActivity extends AppCompatActivity{
         btn1.setVisibility(View.INVISIBLE);
         btn2.setVisibility(View.INVISIBLE);
         btn3.setVisibility(View.INVISIBLE);
+        btnShare.setVisibility(View.INVISIBLE);
         btnNext.setVisibility(View.INVISIBLE);
 
         btnAnalyse.setVisibility(View.VISIBLE);
         btnReturn.setVisibility(View.VISIBLE);
     }
 
-
-//    private void createTXTFolder() {
-//        String folderPath = Environment.getExternalStorageDirectory().getAbsolutePath() + "/txtFolder";
-//
-//        File folder = new File(folderPath);
-//
-//        if (!folder.exists()) {
-//            // 如果文件夹不存在，创建文件夹
-//            if (folder.mkdirs()) {
-//
-//                // 文件夹创建成功
-//            } else {
-//                // 文件夹创建失败
-//            }
-//        }
-//        Log.i("txtFolder",folder.getAbsolutePath());
-//
-//    }
 
 
     private void createTXTFolder(){
@@ -386,7 +355,7 @@ public class MainActivity extends AppCompatActivity{
         btn1 = findViewById(R.id.btn1);//拍照按钮
         btn2 = findViewById(R.id.btn2);//调用相册按钮
         btn3 = findViewById(R.id.btn3);//调用裁剪按钮
-//        btn3.setVisibility(View.INVISIBLE);
+        btn3.setVisibility(View.INVISIBLE);
 
         btnNext = findViewById(R.id.btnNext);
         btnNext.setVisibility(View.INVISIBLE);
@@ -399,7 +368,7 @@ public class MainActivity extends AppCompatActivity{
                 verifyCameraPermissions(MainActivity.this);
 
                 photoName = System.currentTimeMillis()+".jpg";
-                File image_file = new File(getExternalCacheDir(),photoName);//该方法其实并没有在内存中创建文件，所以还要创建文件
+                image_file = new File(getExternalCacheDir(),photoName);//该方法其实并没有在内存中创建文件，所以还要创建文件
 
                 try {
                     if(image_file.exists()){
@@ -460,14 +429,6 @@ public class MainActivity extends AppCompatActivity{
                     String filename = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.CHINA)
                             .format(new Date()) + ".jpg";
 
-
-//                    File file = new File(Environment.getExternalStorageDirectory(), filename);
-//                    fileUri = FileProvider.getUriForFile(MainActivity.this, "com.example.tst.MainActivity.image_Uri", file);
-
-//                    String packageName = getPackageName();
-//                    grantUriPermission(packageName, fileUri, Intent.FLAG_GRANT_READ_URI_PERMISSION
-//                            | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
-
                     UCrop.of(image_uri, fileUri)
                             .start(MainActivity.this);
 
@@ -509,6 +470,7 @@ public class MainActivity extends AppCompatActivity{
                 btn2.setVisibility(View.VISIBLE);
                 btnNext.setVisibility(View.INVISIBLE);
 
+
                 tv1.setImageBitmap(null);
 
             }
@@ -533,6 +495,19 @@ public class MainActivity extends AppCompatActivity{
             public void onClick(View view) {
                 saveIntData();
                 btnOutPut.setVisibility(View.INVISIBLE);
+            }
+        });
+
+        btnShare = findViewById(R.id.btnShare);
+        btnShare.setVisibility(View.INVISIBLE);
+        btnShare.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                String path =Environment.getExternalStorageDirectory()+File.separator;//sd根目录
+                 Intent intent = new Intent(Intent.ACTION_SEND);
+                 intent.setType("image/*");
+                 intent.putExtra(Intent.EXTRA_STREAM, image_uri);
+                 startActivity(Intent.createChooser(intent, "Share"));
             }
         });
 
@@ -568,6 +543,7 @@ public class MainActivity extends AppCompatActivity{
                         e.printStackTrace();
                     }
                     btn3.setVisibility(View.VISIBLE);
+                    btnShare.setVisibility(View.VISIBLE);
                     btnNext.setVisibility(View.VISIBLE);
                 }
                 break;
@@ -589,6 +565,7 @@ public class MainActivity extends AppCompatActivity{
                         Log.e("okiamfine", "Uri:" + String.valueOf(image_uri));
                     }
                     btn3.setVisibility(View.VISIBLE);
+                    btnShare.setVisibility(View.VISIBLE);
                     btnNext.setVisibility(View.VISIBLE);
                 }
                 break;
@@ -596,7 +573,8 @@ public class MainActivity extends AppCompatActivity{
             case UCrop.REQUEST_CROP:     //调用剪裁后返回
             {
                 if (resultCode == RESULT_OK) {
-                    final Uri resultUri = UCrop.getOutput(data);
+//                    final Uri resultUri = UCrop.getOutput(data);
+                    resultUri = UCrop.getOutput(data);
                     if(resultUri==null){Log.e("whoyouare", "whoyouare");}
                         else {Log.e("whoyouare", String.valueOf(resultUri));}
 

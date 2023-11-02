@@ -10,14 +10,14 @@ tools:context=".FenXi"    >
 <TableLayout
     android:id="@+id/tableLayout"
     android:layout_width="match_parent"
-    android:layout_height="900dp"
+    android:layout_height="1000dp"
     android:stretchColumns="*">
 
     <TableRow>
 
         <TextView
             android:layout_height="50dp"
-            android:layout_width="6dp"
+            android:layout_width="10dp"
             android:text="文档打开次数"
             android:textSize="24sp"
             android:textStyle="bold" />
@@ -65,7 +65,7 @@ tools:context=".FenXi"    >
     <TableRow>
 
         <TextView
-            android:layout_height="300dp"
+            android:layout_height="500dp"
             android:layout_width="6dp"
             android:textSize="24sp"
             android:text="数据分析"
@@ -73,7 +73,7 @@ tools:context=".FenXi"    >
 
         <TextView
             android:id="@+id/tvDataAnalysis"
-            android:layout_height="300dp"
+            android:layout_height="500dp"
             android:layout_width="12dp"
             android:textSize="24sp"
             android:text="-" />
